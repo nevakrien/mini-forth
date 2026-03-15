@@ -14,6 +14,7 @@ static void run_vm(VM* vm, code_t* code){
         [OP_DONE]       = &&op_done,
         [OP_PUSH_CONST] = &&op_push_const,
         [OP_CALL]       = &&op_call,
+        [OP_RET]       = &&op_ret,
         [OP_DROP]       = &&op_drop,
         [OP_DUP]        = &&op_dup,
         [OP_ADD]        = &&op_add,
@@ -50,6 +51,10 @@ op_call: {
     code = (code_t*)p;
     DISPATCH();
 }
+
+op_ret:
+	code=(code_t*)ARR_POP(vm->rs);
+	DISPATCH();
 
 op_pop_rs:
 	PUSH(ARR_POP(vm->rs));

@@ -13,8 +13,9 @@ typedef struct {
 
 typedef enum : char {
     OP_DONE=0,
-    OP_CALL,
     OP_PUSH_CONST,
+    OP_CALL,
+    OP_RET,
     OP_DROP,
     OP_DUP,
     OP_ADD,

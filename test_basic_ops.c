@@ -86,13 +86,37 @@ static void test_sub(void){
 	printf("test_sub: PASSED (-70)\n");
 }
 
+static void test_call(void){
+	VM vm = {0};
+
+	Comp func_comp = {0};
+	comp_push_code(&func_comp, OP_PUSH_CONST);
+	comp_push_word(&func_comp, 10);
+	comp_push_code(&func_comp, OP_PUSH_CONST);
+	comp_push_word(&func_comp, 20);
+	comp_push_code(&func_comp, OP_ADD);
+	comp_push_code(&func_comp, OP_RET);
+
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 5);
+	comp_push_code(&vm.comp, OP_CALL);
+	comp_push_word(&vm.comp, (word_t)(func_comp.data));
+	comp_push_code(&vm.comp, OP_DONE);
+
+	run_vm(&vm, vm.comp.data);
+
+	assert(vm.tos == 30 && "5 + (10 + 20) == 30");
+	printf("test_call: PASSED (30)\n");
+}
+
 int main(void){
 	test_add();
 	test_mul();
 	test_compound();
 	test_dup_drop();
 	test_sub();
-
+	test_call();
+	
 	printf("\nAll tests PASSED!\n");
 	return 0;
 }
