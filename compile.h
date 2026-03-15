@@ -6,7 +6,7 @@
 #include <string.h>
 
 static inline void comp_push_word(Comp* comp,word_t c){
-	ARR_ENSURE_CAP(*comp);
+	ARR_ENSURE_CAP(*comp,comp->len+sizeof(c));
 	comp->len+=sizeof(c);
 	memcpy(&comp->data[comp->len-sizeof(c)],&c,sizeof(c));
 }

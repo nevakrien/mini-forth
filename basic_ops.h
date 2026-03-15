@@ -20,7 +20,6 @@ static void run_vm(VM* vm, code_t* code){
         [OP_SUB]        = &&op_sub,
         [OP_MUL]        = &&op_mul,
         [OP_DIV]        = &&op_div,
-        [OP_DIV]        = &&op_div,
         [OP_MOD]        = &&op_mod,
         [OP_PUSH_RS]    = &&op_push_rs,
         [OP_POP_RS]     = &&op_pop_rs,

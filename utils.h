@@ -2,8 +2,6 @@
 #define UTILS_H
 
 #include <stdint.h>
-#include <stddef.h>
-#include <stdlib.h>
 #include <assert.h>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -30,18 +28,21 @@
 #define ARR_AT(arr,i) ((arr).data[(ASSERT(((size_t)i)<((size_t)arr.len)),i)])
 #define ARR_REMOVE_UNORDERED(arr,i) (AT(arr,i)=PEEK(arr),(arr).data[--(arr).len])
 
-#define ARR_ENSURE_CAP(arr) \
-((size_t)(arr).len >= (size_t)(arr).cap ? ( \
-    (arr).cap = (arr).cap ? (arr).cap * 2 : 8, \
-    (arr).data = realloc((arr).data, (arr).cap * sizeof(*(arr).data)), \
-    assert((arr).data != NULL && "went OOM"), \
-    (arr) \
-) : (arr))
+#define ARR_ENSURE_CAP(arr, need) \
+({ \
+    __auto_type _a = &(arr); \
+    size_t _need = (size_t)(need); \
+    if (_a->cap < _need) { \
+        size_t _new = _a->cap ? _a->cap : 8; \
+        while (_new < _need) _new *= 2; \
+        _a->cap = _new; \
+        _a->data = realloc(_a->data, _a->cap * sizeof(*_a->data)); \
+        assert(_a->data && "went OOM"); \
+    } \
+})
 
-#define ENSURE_CAP(arr) ARR_ENSURE_CAP(arr)
-
-#define ARR_PUSH(arr,x) \
-(ENSURE_CAP(arr), (arr).data[(arr).len] = (x), (arr).len++)
+#define ARR_PUSH(arr, x) \
+(ARR_ENSURE_CAP(arr, (arr).len + 1), (arr).data[(arr).len] = (x), (arr).len++)
 
 #endif // UTILS_H
 
