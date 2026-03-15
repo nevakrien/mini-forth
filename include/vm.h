@@ -38,8 +38,14 @@ typedef enum : char {
 typedef struct {
 	code_t* data;
 	size_t len;
+    //order is significant
 	size_t cap;
 }Comp;
+
+typedef struct {
+    code_t* data;
+    size_t len;
+}Code;
 
 typedef struct {
 	word_t tos;

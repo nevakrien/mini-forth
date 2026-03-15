@@ -31,9 +31,9 @@ static void test_lex_stress(void) {
 
         Word* word = lex_define(&lex, name, strlen(name));
 
-        word->comp.data = (code_t*)xmalloc(sizeof(code_t));
-        word->comp.data[0] = (code_t)i;
-        word->comp.len = 1;
+        word->code.data = (code_t*)xmalloc(sizeof(code_t));
+        word->code.data[0] = (code_t)i;
+        word->code.len = 1;
         word->is_inline = false;
         word->is_now = false;
 
@@ -43,7 +43,7 @@ static void test_lex_stress(void) {
         /* periodically verify pointer stability */
         if ((i % 251) == 0) {
             for (size_t j = 0; j < check_len; j++) {
-                assert(checks[j].ptr->comp.data[0] == checks[j].expected);
+                assert(checks[j].ptr->code.data[0] == checks[j].expected);
             }
         }
     }
@@ -60,7 +60,7 @@ static void test_lex_stress(void) {
 
     /* final pointer stability check */
     for (size_t j = 0; j < check_len; j++) {
-        assert(checks[j].ptr->comp.data[0] == checks[j].expected);
+        assert(checks[j].ptr->code.data[0] == checks[j].expected);
     }
 
     printf("test_lex_stress: PASSED (%zu inserts)\n", inserts);

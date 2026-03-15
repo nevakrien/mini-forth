@@ -11,7 +11,7 @@
 
 
 typedef struct {
-    Comp comp;
+    Code code;
     bool is_inline:1;
     bool is_now:1;
 } Word;
@@ -30,18 +30,18 @@ static inline void comp_push_code(Comp* comp,code_t c){
 static inline void compile_later(Comp* comp, const Word* w){
     if(!w->is_inline){
         comp_push_code(comp, OP_CALL);
-        comp_push_word(comp, (word_t)w->comp.data);
+        comp_push_word(comp, (word_t)w->code.data);
         return;
     }
 
-    for(size_t i = 0; i < w->comp.len; i++){
-        comp_push_code(comp, w->comp.data[i]);
+    for(size_t i = 0; i < w->code.len; i++){
+        comp_push_code(comp, w->code.data[i]);
     }
 }
 
 static inline void compile_word(VM* vm, const Word* w){
     if(w->is_now)
-        run_vm(vm, w->comp.data);
+        run_vm(vm, w->code.data);
     else
         compile_later(&vm->comp, w);
 }
@@ -68,8 +68,8 @@ typedef struct {
 } Lex;
 
 static inline void destroy_word(Word* word){
-	free(word->comp.data);
-	word->comp.data=NULL;
+	free(word->code.data);
+	word->code.data=NULL;
 }
 
 static inline void lex_init(Lex* lex) {

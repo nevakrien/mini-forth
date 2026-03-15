@@ -60,7 +60,7 @@ op_call_dyn: {
 
 op_word_call_ptr: {
     const Word* f = (const Word*)vm->tos;
-    vm->tos=(word_t)f->comp.data;
+    vm->tos=(word_t)f->code.data;
     DISPATCH();
 }
 
