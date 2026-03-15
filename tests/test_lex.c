@@ -6,48 +6,71 @@
 #include <string.h>
 #include <assert.h>
 
-static void test_lex_last_version_first_large(void){
-	Lex lex;
-	lex_init(&lex);
+typedef struct {
+    Word* ptr;
+    code_t expected;
+} PtrCheck;
 
-	const size_t count = 10000;
-	Word* last_inserted[100];
+static void test_lex_stress(void) {
+    Lex lex;
+    lex_init(&lex);
 
-	for(size_t i = 0; i < count; i++){
-		char name[32];
-		snprintf(name, sizeof(name), "key_%zu", i % 100);
+    const size_t inserts = 20000;
+    const size_t unique_keys = 500;
 
-		Word* word = lex_define(&lex, name, strlen(name));
-		word->comp.data = (code_t*)xmalloc(1);
-		word->comp.data[0] = (code_t)i;
-		word->comp.len = 1;
-		word->is_inline = false;
-		word->is_now = false;
+    PtrCheck *checks = malloc(sizeof(PtrCheck) * inserts);
+    size_t check_len = 0;
 
-		if(i >= count - 100){
-			last_inserted[i - (count - 100)] = word;
-		}	
-	}
+    Word *last_seen[unique_keys];
+    memset(last_seen, 0, sizeof(last_seen));
 
-	for(size_t i = 0; i < 100; i++){
-		char name[32];
-		snprintf(name, sizeof(name), "key_%zu", i);
+    for (size_t i = 0; i < inserts; i++) {
+        char name[32];
+        size_t k = i % unique_keys;
+        snprintf(name, sizeof(name), "key_%zu", k);
 
-		Word* found = lex_find(&lex, name, strlen(name));
-		assert(found != NULL && "key should be found");
+        Word* word = lex_define(&lex, name, strlen(name));
 
-		assert(found == last_inserted[i] && "last inserted version should be found first (pointer equality)");
-		// printf("key_%zu: found pointer %p == expected %p (value=%d)\n", 
-			// i, (void*)found, (void*)last_inserted[i], (int)found->comp.data[0]);
-	}
+        word->comp.data = (code_t*)xmalloc(sizeof(code_t));
+        word->comp.data[0] = (code_t)i;
+        word->comp.len = 1;
+        word->is_inline = false;
+        word->is_now = false;
 
-	printf("test_lex_last_version_first_large: PASSED (count=%zu)\n", count);
+        checks[check_len++] = (PtrCheck){ word, (code_t)i };
+        last_seen[k] = word;
 
-	lex_free(&lex);
+        /* periodically verify pointer stability */
+        if ((i % 251) == 0) {
+            for (size_t j = 0; j < check_len; j++) {
+                assert(checks[j].ptr->comp.data[0] == checks[j].expected);
+            }
+        }
+    }
+
+    /* verify duplicate semantics (last definition wins) */
+    for (size_t i = 0; i < unique_keys; i++) {
+        char name[32];
+        snprintf(name, sizeof(name), "key_%zu", i);
+
+        Word* found = lex_find(&lex, name, strlen(name));
+        assert(found != NULL);
+        assert(found == last_seen[i]);
+    }
+
+    /* final pointer stability check */
+    for (size_t j = 0; j < check_len; j++) {
+        assert(checks[j].ptr->comp.data[0] == checks[j].expected);
+    }
+
+    printf("test_lex_stress: PASSED (%zu inserts)\n", inserts);
+
+    free(checks);
+    lex_free(&lex);
 }
 
-int main(void){
-	test_lex_last_version_first_large();
-	printf("\nAll tests PASSED!\n");
-	return 0;
+int main(void) {
+    test_lex_stress();
+    printf("\nAll tests PASSED!\n");
+    return 0;
 }
