@@ -4,8 +4,8 @@ CFLAGS = -Wall -Wextra -g -fsanitize=address
 test: test_basic_ops
 	./test_basic_ops
 
-test_basic_ops: test_basic_ops.c vm.h compile.h basic_ops.h utils.h mem_alloc.h
-	$(CC) $(CFLAGS) -o $@ $<
+test_basic_ops: test_basic_ops.c vm.c basic_ops.c compile.h
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
 	rm -f test_basic_ops

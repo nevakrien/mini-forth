@@ -2,6 +2,7 @@
 #define VM_H
 #include "utils.h"
 #include <stddef.h>
+#include <stdlib.h>
 
 typedef uintptr_t word_t;
 
@@ -40,6 +41,9 @@ typedef struct {
 	Stack rs;
 	Comp comp;
 }VM;
+
+void vm_init(VM* vm);
+void vm_free(VM* vm);
 
 #endif // VM_H
 
