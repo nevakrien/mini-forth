@@ -1,4 +1,5 @@
 #include "basic_ops.h"
+#include "compile.h"
 
 #define PUSH(x) (ARR_PUSH(vm->ds,vm->tos),vm->tos=x)
 #define DROP() (vm->tos = ARR_POP(vm->ds))
@@ -9,7 +10,8 @@ void run_vm(VM* vm, code_t* code){
         [OP_DONE]       = &&op_done,
         [OP_PUSH_CONST] = &&op_push_const,
         [OP_CALL]       = &&op_call,
-        [OP_RET]       = &&op_ret,
+        [OP_CALL_DYN]   = &&op_call_dyn,
+        [OP_RET]        = &&op_ret,
         [OP_DROP]       = &&op_drop,
         [OP_DUP]        = &&op_dup,
         [OP_ADD]        = &&op_add,
@@ -20,6 +22,9 @@ void run_vm(VM* vm, code_t* code){
         [OP_PUSH_RS]    = &&op_push_rs,
         [OP_POP_RS]     = &&op_pop_rs,
         [OP_PEEK_RS]    = &&op_peek_rs,
+        [OP_COMPILE_CODE] = &&op_compile_code,
+        [OP_WORD_CALL_PTR] = &&op_word_call_ptr,
+
     };
 
 #define DISPATCH() goto *dispatch[*code++]
@@ -44,6 +49,26 @@ op_call: {
 
     ARR_PUSH(vm->rs, (word_t)code);
     code = (code_t*)p;
+    DISPATCH();
+}
+
+op_call_dyn: {
+    code = (code_t*)vm->tos;
+    DROP();
+    DISPATCH();
+}
+
+op_word_call_ptr: {
+    const Word* f = (const Word*)vm->tos;
+    vm->tos=(word_t)f->comp.data;
+    DISPATCH();
+}
+
+
+op_compile_code: {
+    const Word* f = (const Word*)vm->tos;
+    DROP();
+    compile_later(&vm->comp,f);
     DISPATCH();
 }
 
@@ -83,6 +108,4 @@ BASIC_ARITH(mul,*)
 BASIC_ARITH(div,/)
 BASIC_ARITH(mod,%)
 
-#undef BASIC_ARITH
-#undef DISPATCH
 }

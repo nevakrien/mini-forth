@@ -17,16 +17,22 @@ typedef enum : char {
     OP_PUSH_CONST,
     OP_CALL,
     OP_RET,
+    OP_CALL_DYN,
     OP_DROP,
     OP_DUP,
+    
     OP_ADD,
     OP_SUB,
     OP_MUL,
     OP_DIV,
     OP_MOD,
+    
     OP_PUSH_RS,
     OP_POP_RS,
     OP_PEEK_RS,
+
+    OP_COMPILE_CODE,
+    OP_WORD_CALL_PTR,
 } code_t;
 
 typedef struct {

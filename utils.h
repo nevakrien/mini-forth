@@ -3,6 +3,13 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <stdio.h>
+
+#define TODO \
+do { \
+    fprintf(stderr, "TODO hit at %s:%d\n", __FILE__, __LINE__); \
+    abort(); \
+} while (0);
 
 #if defined(__GNUC__) || defined(__clang__)
     #define COMPILER_UNREACHABLE() __builtin_unreachable()
