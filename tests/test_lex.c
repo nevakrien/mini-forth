@@ -17,7 +17,7 @@ static void test_lex_last_version_first_large(void){
 		char name[32];
 		snprintf(name, sizeof(name), "key_%zu", i % 100);
 
-		Word* word = (Word*)xmalloc(sizeof(Word));
+		Word* word = lex_define(&lex, name, strlen(name));
 		word->comp.data = (code_t*)xmalloc(1);
 		word->comp.data[0] = (code_t)i;
 		word->comp.len = 1;
@@ -26,9 +26,7 @@ static void test_lex_last_version_first_large(void){
 
 		if(i >= count - 100){
 			last_inserted[i - (count - 100)] = word;
-		}
-
-		lex_define(&lex, name, strlen(name), word);
+		}	
 	}
 
 	for(size_t i = 0; i < 100; i++){
@@ -39,8 +37,8 @@ static void test_lex_last_version_first_large(void){
 		assert(found != NULL && "key should be found");
 
 		assert(found == last_inserted[i] && "last inserted version should be found first (pointer equality)");
-		printf("key_%zu: found pointer %p == expected %p (value=%d)\n", 
-			i, (void*)found, (void*)last_inserted[i], (int)found->comp.data[0]);
+		// printf("key_%zu: found pointer %p == expected %p (value=%d)\n", 
+			// i, (void*)found, (void*)last_inserted[i], (int)found->comp.data[0]);
 	}
 
 	printf("test_lex_last_version_first_large: PASSED (count=%zu)\n", count);

@@ -1,13 +1,29 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -fsanitize=address
+CFLAGS = -Wall -Wextra -g -fsanitize=address -Iinclude -I.
 
-test: test_basic_ops
-	./test_basic_ops
+SRC_DIR = src
+BIN_DIR = bin
+TEST_DIR = tests
 
-test_basic_ops: test_basic_ops.c vm.c basic_ops.c compile.h
+HEADERS = $(SRC_DIR)/vm.c $(SRC_DIR)/basic_ops.c \
+          include/vm.h include/basic_ops.h include/compile.h include/utils.h
+
+TEST_BINS = $(BIN_DIR)/test_basic_ops $(BIN_DIR)/test_lex
+
+test: $(TEST_BINS)
+	@echo "Running test_basic_ops..."
+	./$(BIN_DIR)/test_basic_ops
+	@echo ""
+	@echo "Running test_lex..."
+	./$(BIN_DIR)/test_lex
+
+$(BIN_DIR)/test_basic_ops: $(TEST_DIR)/test_basic_ops.c $(SRC_DIR)/vm.c $(SRC_DIR)/basic_ops.c $(HEADERS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(BIN_DIR)/test_lex: $(TEST_DIR)/test_lex.c $(SRC_DIR)/vm.c $(SRC_DIR)/basic_ops.c $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f test_basic_ops
+	rm -f $(BIN_DIR)/*
 
 .PHONY: test clean
