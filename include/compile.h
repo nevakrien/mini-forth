@@ -59,7 +59,6 @@ static inline void* xrealloc(void* p, size_t sz) {
 }
 
 typedef struct LexEntry {
-    char* name;
     Word word;
     UT_hash_handle hh;
 } LexEntry;
@@ -81,7 +80,7 @@ static inline void lex_free(Lex* lex) {
     LexEntry *entry, *tmp;
     HASH_ITER(hh, lex->entries, entry, tmp) {
         HASH_DELETE(hh, lex->entries, entry);
-        free(entry->name);
+        free((void*)entry->hh.key);
         destroy_word(&entry->word);
         free(entry);
     }
@@ -96,11 +95,11 @@ static inline Word* lex_find(Lex* lex, const char* name, size_t name_len) {
 static inline Word* lex_define(Lex* lex, const char* name, size_t name_len) {
     LexEntry* entry;
     entry = (LexEntry*)xmalloc(sizeof(LexEntry));
-    entry->name = (char*)xmalloc(name_len + 1);
-    memcpy(entry->name, name, name_len);
-    entry->name[name_len] = '\0';
+    char* owned = (char*)xmalloc(name_len + 1);
+    memcpy(owned, name, name_len);
+    owned[name_len] = '\0';
     entry->word = (Word){0};
-    HASH_ADD_KEYPTR(hh, lex->entries, entry->name, name_len, entry);
+    HASH_ADD_KEYPTR(hh, lex->entries, owned, name_len, entry);
     return &entry->word;
 }
 
