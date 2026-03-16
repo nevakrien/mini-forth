@@ -50,6 +50,9 @@ void run_vm(VM *vm, const code_t *code) {
       [OP_RET] = &&op_ret,
       [OP_DROP] = &&op_drop,
       [OP_DUP] = &&op_dup,
+      [OP_PICK] = &&op_pick,
+      [OP_ROLL] = &&op_roll,
+
       [OP_ADD] = &&op_add,
       [OP_SUB] = &&op_sub,
       [OP_MUL] = &&op_mul,
@@ -71,9 +74,9 @@ void run_vm(VM *vm, const code_t *code) {
       [OP_FUNC_END] = &&op_func_end,
       [OP_FUNC_INLINE_END] = &&op_func_inline_end,
       [OP_FUNC_OUTLINE_END] = &&op_func_outline_end,
-      [OP_PICK] = &&op_pick,
-      [OP_ROLL] = &&op_roll,
 
+      [OP_BRANCH] = &&op_branch,
+      [OP_JUMP] = &&op_jump,
   };
 
   // static const code_t code_run_loop[]  = {OP_RUN_LOOP,OP_RET};
@@ -111,6 +114,26 @@ op_push_const: {
 op_ret:
   code = (code_t *)ARR_POP(vm->rs);
   DISPATCH_STAY();
+
+op_branch:{
+    word_t cond= vm->tos;
+    if(cond){
+        goto op_jump;
+    }
+
+    code+=sizeof(boffset_t)+1;
+    DISPATCH_STAY();
+}
+
+
+op_jump:{
+    boffset_t offset = 0;
+    memcpy(&offset,code+1, sizeof(boffset_t));
+
+    code+=offset;
+    DISPATCH_STAY();
+}
+
 
 op_pop_rs:
   PUSH(ARR_POP(vm->rs));

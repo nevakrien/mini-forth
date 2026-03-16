@@ -8,6 +8,8 @@
 typedef uintptr_t word_t;
 typedef intptr_t sword_t;
 
+typedef int16_t boffset_t;
+
 typedef struct {
 	word_t* data;
 	size_t len;
@@ -51,6 +53,14 @@ typedef enum : char {
     OP_FUNC_END,
     OP_FUNC_INLINE_END,
     OP_FUNC_OUTLINE_END,
+
+    OP_BRANCH,
+    OP_JUMP,
+
+    // //these are comptime for inserting branches
+    // OP_IF,
+    // OP_ELSE,
+    // OP_END,
 
     OP_LAST,
 } code_t;
