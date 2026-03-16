@@ -65,14 +65,25 @@ static inline Word* lex_find(Lex* lex, const char* name, size_t name_len) {
     return entry ? &entry->word : NULL;
 }
 
-static inline Word* lex_define(Lex* lex, const char* name, size_t name_len) {
+static inline LexEntry* make_lex_entry(const char* name, size_t name_len) {
     LexEntry* entry;
     entry = (LexEntry*)xmalloc(sizeof(LexEntry));
     char* owned = (char*)xmalloc(name_len + 1);
     memcpy(owned, name, name_len);
     owned[name_len] = '\0';
+    entry->hh.key=owned;
+    entry->hh.keylen=name_len;
     entry->word = (Word){0};
-    HASH_ADD_KEYPTR(hh, lex->entries, owned, name_len, entry);
+    return entry;
+}
+
+static inline void lex_insert_entry(Lex* lex,LexEntry* entry){
+    HASH_ADD_KEYPTR(hh, lex->entries, entry->hh.key, entry->hh.keylen, entry);
+}
+
+static inline Word* lex_define(Lex* lex, const char* name, size_t name_len) {
+    LexEntry* entry = make_lex_entry(name,name_len); 
+    lex_insert_entry(lex,entry);   
     return &entry->word;
 }
 
@@ -109,9 +120,25 @@ static inline void lex_init(Lex* lex) {
         word->code.data[1] = OP_RET;
     }
 
-    // struct { code_t op[10]; char* name; } now[] = {
-    //     [OP_]
-    // };
+    struct { code_t op; char* name; } simple_now[] = {
+        { OP_FUNC_START, ":" },
+        { OP_NOW_FUNC_START, "now:" },
+        { OP_FUNC_END, ";" },
+        { OP_FUNC_INLINE_END, ";inline" },
+        { OP_FUNC_OUTLINE_END, ";outline" },
+    };
+    num_ops = sizeof(simple_now) / sizeof(simple_now[0]);
+    
+    for(size_t i=0;i<num_ops;i++){
+        Word* word = lex_define(lex, simple_now[i].name, strlen(simple_now[i].name));
+        word->is_inline = true;
+        word->is_now = true;
+        word->code.len = 2;
+        word->code.data = xmalloc(sizeof(code_t) * 2);
+        word->code.data[0] = simple_now[i].op;
+        word->code.data[1] = OP_RET;
+    }
+
 }
 
 

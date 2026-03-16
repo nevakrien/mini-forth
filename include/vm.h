@@ -43,6 +43,12 @@ typedef enum : char {
     OP_DOT,
     OP_DOT_S,
 
+    OP_FUNC_START,
+    OP_NOW_FUNC_START,
+    OP_FUNC_END,
+    OP_FUNC_INLINE_END,
+    OP_FUNC_OUTLINE_END,
+
     OP_LAST,
 } code_t;
 

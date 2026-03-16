@@ -6,6 +6,15 @@
 #define PUSH(x) (ARR_PUSH(vm->ds,vm->tos),vm->tos=x)
 #define DROP() (vm->tos = ARR_POP(vm->ds))
 
+static inline Code take_comp(VM* vm){
+    Code ans = {0};
+    ans.data = vm->comp.data;
+    ans.len = vm->comp.len;
+    vm->comp = (Comp){0};
+
+    return ans;
+}
+
 static inline int parse_number(word_t* ans,const char* name, size_t name_len){
     bool saw_minus=false;
     *ans = 0;
@@ -28,9 +37,10 @@ static inline int parse_number(word_t* ans,const char* name, size_t name_len){
     return 0;
 }
 
-void run_vm(VM* vm, code_t* code){
+void run_vm(VM* vm, const code_t* code){
+    // puts("run_vm start");
 
-    static void* dispatch[] = {
+    static const void* const dispatch[] = {
         [OP_DONE]       = &&op_done,
         [OP_PUSH_CONST] = &&op_push_const,
         [OP_CALL]       = &&op_call,
@@ -54,10 +64,24 @@ void run_vm(VM* vm, code_t* code){
         [OP_RUN_LOOP]=&&op_run_loop,
         [OP_DOT] = &&op_dot,
         [OP_DOT_S] = &&op_dot_s,
+        [OP_FUNC_START] = &&op_func_start,
+        [OP_NOW_FUNC_START] = &&op_now_func_start,
+        [OP_FUNC_END] = &&op_func_end,
+        [OP_FUNC_INLINE_END] = &&op_func_inline_end,
+        [OP_FUNC_OUTLINE_END] = &&op_func_outline_end,
 
     };
 
+    // static const code_t code_run_loop[]  = {OP_RUN_LOOP,OP_RET};
+    static const code_t code_compile_loop[]  = {OP_COMPILE_LOOP,OP_RET};
+
 #define DISPATCH() goto *dispatch[*code++]
+#define DISPATCH_CALL(tgt) do {\
+        ARR_PUSH(vm->rs,(word_t)(code));\
+        code=(tgt);\
+        DISPATCH();\
+    } while(0)
+    
 
     DISPATCH();
 
@@ -69,106 +93,6 @@ op_push_const: {
     memcpy(&c, code, sizeof(word_t));
     code += sizeof(word_t);
     PUSH(c);
-    DISPATCH();
-}
-
-op_call: {
-    word_t p = 0;
-    memcpy(&p, code, sizeof(word_t));
-    code += sizeof(word_t);
-
-    ARR_PUSH(vm->rs, (word_t)code);
-    code = (code_t*)p;
-    DISPATCH();
-}
-
-op_call_dyn: {
-    code = (code_t*)vm->tos;
-    DROP();
-    DISPATCH();
-}
-
-op_word_call_ptr: {
-    const Word* f = (const Word*)vm->tos;
-    vm->tos=(word_t)f->code.data;
-    DISPATCH();
-}
-
-
-op_compile_code: {
-    const Word* f = (const Word*)vm->tos;
-    DROP();
-    compile_later(&vm->comp,f);
-    DISPATCH();
-}
-
-op_compile_loop:{
-    TextStream tok = next_token(&vm->input);
-    if(tok.start==tok.end) DISPATCH();
-    const char* text = tok.start;
-    size_t len = tok.end-tok.start;
-
-    const Word* w= lex_find(vm->lex,text,len);
-
-    if(w) {
-        if(w->is_now){
-            ARR_PUSH(vm->rs,(word_t)(code-1));
-            code=w->code.data;
-            DISPATCH();
-        }
-        else{
-            compile_later(&vm->comp, w);
-            goto op_compile_loop;
-        }
-    }
-
-    word_t num = 0;
-    if(parse_number(&num,text,len)) {
-        fprintf(stderr, "error: unrecognized token '%.*s'\n",
-                (int)len, text);
-        return;
-    };
-
-    comp_push_code(&vm->comp,OP_PUSH_CONST);
-    comp_push_word(&vm->comp,num);
-    goto op_compile_loop;
-}
-
-op_run_loop:{
-    TextStream tok = next_token(&vm->input);
-    if(tok.start==tok.end) DISPATCH();
-    const char* text = tok.start;
-    size_t len = tok.end-tok.start;
-
-    const Word* w= lex_find(vm->lex,text,len);
-    if(w) {
-        ARR_PUSH(vm->rs,(word_t)(code-1));
-        code=w->code.data;
-        DISPATCH();
-    }
-
-    word_t num = 0;
-    if(parse_number(&num,text,len)) {
-        fprintf(stderr, "error: unrecognized token '%.*s'\n",
-                (int)len, text);
-        return;
-    };
-    PUSH(num);
-    goto op_run_loop;
-}
-
-op_next_token: {
-    TextStream tok = next_token(&vm->input);
-    size_t len = tok.end-tok.start;
-    PUSH((word_t)tok.start);
-    PUSH((word_t)len);
-    DISPATCH();
-}
-
-op_find_word: {
-    const char* text = (void*)ARR_POP(vm->ds);
-    size_t len = (size_t)vm->tos;
-    vm->tos = (word_t)lex_find(vm->lex,text,len);
     DISPATCH();
 }
 
@@ -224,4 +148,171 @@ op_dot_s:
     printf("\n");
     DISPATCH();
 
+
+
+op_call: {
+    word_t p = 0;
+    memcpy(&p, code, sizeof(word_t));
+    code += sizeof(word_t);
+
+    ARR_PUSH(vm->rs, (word_t)code);
+    code = (code_t*)p;
+    DISPATCH();
 }
+
+op_call_dyn: {
+    code = (code_t*)vm->tos;
+    DROP();
+    DISPATCH();
+}
+
+op_word_call_ptr: {
+    const Word* f = (const Word*)vm->tos;
+    vm->tos=(word_t)f->code.data;
+    DISPATCH();
+}
+
+
+op_compile_code: {
+    const Word* f = (const Word*)vm->tos;
+    DROP();
+    compile_later(&vm->comp,f);
+    DISPATCH();
+}
+
+
+op_next_token: {
+    TextStream tok = next_token(&vm->input);
+    size_t len = tok.end-tok.start;
+    PUSH((word_t)tok.start);
+    PUSH((word_t)len);
+    DISPATCH();
+}
+
+op_find_word: {
+    const char* text = (void*)ARR_POP(vm->ds);
+    size_t len = (size_t)vm->tos;
+    vm->tos = (word_t)lex_find(vm->lex,text,len);
+    DISPATCH();
+}
+
+op_func_start:{
+    TextStream tok = next_token(&vm->input);
+    LexEntry* entry = make_lex_entry(tok.start,tok.end-tok.start);
+    PUSH((word_t)entry);
+    DISPATCH_CALL(code_compile_loop);
+}
+
+op_now_func_start:{
+    TextStream tok = next_token(&vm->input);
+    LexEntry* entry = make_lex_entry(tok.start,tok.end-tok.start);
+    entry->word.is_now=true;
+    PUSH((word_t)entry);
+    DISPATCH_CALL(code_compile_loop);
+}
+
+op_func_outline_end:{
+    // puts("runing func end");
+
+    LexEntry* entry = (LexEntry*)vm->tos;
+    DROP();
+
+    ARR_PUSH(vm->comp,OP_RET);
+    entry->word.code = take_comp(vm);
+
+    ASSERT(vm->lex);
+    lex_insert_entry(vm->lex,entry); 
+    
+    goto op_ret;
+}
+
+op_func_inline_end:{
+    LexEntry* entry = (LexEntry*)vm->tos;
+    DROP();
+    
+    ARR_PUSH(vm->comp,OP_RET);
+    entry->word.code = take_comp(vm);
+    entry->word.is_inline = true;
+
+    ASSERT(vm->lex);
+    lex_insert_entry(vm->lex,entry); 
+
+    goto op_ret;
+}
+
+op_func_end:{
+    LexEntry* entry = (LexEntry*)vm->tos;
+    DROP();
+    
+    ARR_PUSH(vm->comp,OP_RET);
+    entry->word.code = take_comp(vm);
+
+    //inline functions which would be more expensive to call
+    if(entry->word.code.len <= sizeof(word_t)+1)
+        entry->word.is_inline = true;
+
+    ASSERT(vm->lex);
+    lex_insert_entry(vm->lex,entry); 
+
+    goto op_ret;
+}
+
+
+op_compile_loop:{
+    // puts("runing compile loop");
+
+    TextStream tok = next_token(&vm->input);
+    if(tok.start==tok.end) DISPATCH();
+    const char* text = tok.start;
+    size_t len = tok.end-tok.start;
+
+    const Word* w= lex_find(vm->lex,text,len);
+
+    if(w) {
+        if(w->is_now){
+            DISPATCH_CALL(w->code.data);
+        }
+        else{
+            compile_later(&vm->comp, w);
+            goto op_compile_loop;
+        }
+    }
+
+    word_t num = 0;
+    if(parse_number(&num,text,len)) {
+        fprintf(stderr, "error: unrecognized token '%.*s'\n",
+                (int)len, text);
+        return;
+    };
+
+    comp_push_code(&vm->comp,OP_PUSH_CONST);
+    comp_push_word(&vm->comp,num);
+    goto op_compile_loop;
+}
+
+op_run_loop:{
+    // puts("runing eval loop");
+
+    TextStream tok = next_token(&vm->input);
+    if(tok.start==tok.end) DISPATCH();
+    const char* text = tok.start;
+    size_t len = tok.end-tok.start;
+
+    const Word* w= lex_find(vm->lex,text,len);
+    if(w) {
+        DISPATCH_CALL(w->code.data);
+    }
+
+    word_t num = 0;
+    if(parse_number(&num,text,len)) {
+        fprintf(stderr, "error: unrecognized token '%.*s'\n",
+                (int)len, text);
+        return;
+    };
+    PUSH(num);
+    goto op_run_loop;
+}
+
+}
+
+

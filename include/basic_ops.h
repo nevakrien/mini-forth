@@ -5,6 +5,6 @@
 #include <stddef.h>
 #include <string.h>
 
-void run_vm(VM* vm, code_t* code);
+void run_vm(VM* vm, const code_t* code);
 
 #endif // BASIC_OPS_H
