@@ -1,10 +1,12 @@
 #ifndef VM_H
 #define VM_H
+
 #include "utils.h"
 #include <stddef.h>
 #include <stdlib.h>
 
 typedef uintptr_t word_t;
+typedef intptr_t sword_t;
 
 typedef struct {
 	word_t* data;
@@ -33,6 +35,11 @@ typedef enum : char {
 
     OP_COMPILE_CODE,
     OP_WORD_CALL_PTR,
+
+    OP_DOT,
+    OP_DOT_S,
+
+    OP_LAST,
 } code_t;
 
 typedef struct {
@@ -47,11 +54,14 @@ typedef struct {
     size_t len;
 }Code;
 
+struct Lex;
 typedef struct {
 	word_t tos;
 	Stack ds;
 	Stack rs;
 	Comp comp;
+    //lex is not owned and wont be auto freed
+    struct Lex* lex;
 }VM;
 
 void vm_init(VM* vm);

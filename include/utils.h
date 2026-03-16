@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
 #define TODO \
 do { \
@@ -30,6 +33,18 @@ do { \
     #define UNREACHABLE() COMPILER_UNREACHABLE()
 #endif
 
+static inline void* xmalloc(size_t sz) {
+    void* p = malloc(sz);
+    if (!p) abort();
+    return p;
+}
+
+static inline void* xrealloc(void* p, size_t sz) {
+    p = realloc(p, sz);
+    if (!p) abort();
+    return p;
+}
+
 #define ARR_POP(arr) ((arr).data[(ASSERT(arr.len),--(arr).len)])
 #define ARR_PEEK(arr) ((arr).data[(ASSERT(arr.len),(arr).len-1)])
 #define ARR_AT(arr,i) ((arr).data[(ASSERT(((size_t)i)<((size_t)arr.len)),i)])
@@ -43,8 +58,7 @@ do { \
         size_t _new = _a->cap ? _a->cap : 8; \
         while (_new < _need) _new *= 2; \
         _a->cap = _new; \
-        _a->data = realloc(_a->data, _a->cap * sizeof(*_a->data)); \
-        assert(_a->data && "went OOM"); \
+        _a->data = xrealloc(_a->data, _a->cap * sizeof(*_a->data)); \
     } \
 })
 

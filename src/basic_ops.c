@@ -1,5 +1,6 @@
 #include "basic_ops.h"
 #include "compile.h"
+#include <stdio.h>
 
 #define PUSH(x) (ARR_PUSH(vm->ds,vm->tos),vm->tos=x)
 #define DROP() (vm->tos = ARR_POP(vm->ds))
@@ -24,6 +25,8 @@ void run_vm(VM* vm, code_t* code){
         [OP_PEEK_RS]    = &&op_peek_rs,
         [OP_COMPILE_CODE] = &&op_compile_code,
         [OP_WORD_CALL_PTR] = &&op_word_call_ptr,
+        [OP_DOT] = &&op_dot,
+        [OP_DOT_S] = &&op_dot_s,
 
     };
 
@@ -107,5 +110,20 @@ BASIC_ARITH(sub,-)
 BASIC_ARITH(mul,*)
 BASIC_ARITH(div,/)
 BASIC_ARITH(mod,%)
+
+op_dot:
+    printf("%td\n", (sword_t)vm->tos);
+    DROP();
+    DISPATCH();
+
+op_dot_s:
+    if(vm->ds.len)
+        printf("%td ", (sword_t)vm->tos);
+
+    for(size_t i = 0; i + 1 < vm->ds.len; i++){
+        printf("%td ", (sword_t)vm->ds.data[i]);
+    }
+    printf("\n");
+    DISPATCH();
 
 }
