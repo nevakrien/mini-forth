@@ -93,6 +93,16 @@ static inline void lex_init(Lex* lex) {
     struct { code_t op; char* name; } simple[] = {
         { OP_DROP, "drop" },
         { OP_DUP, "dup" },
+        { OP_SWAP, "swap" },
+        { OP_OVER, "over" },
+        { OP_NIP, "nip" },
+        { OP_TUCK, "tuck" },
+        { OP_ROT, "rot" },
+        { OP_NROT, "-rot" },
+        { OP_2DUP, "2dup" },
+        { OP_2DROP, "2drop" },
+        { OP_2SWAP, "2swap" },
+        { OP_2OVER, "2over" },
         { OP_PICK, "pick" },
         { OP_ROLL, "roll" },
         { OP_ADD, "+" },
@@ -153,4 +163,3 @@ static inline void run_text(VM* vm){
 
 
 #endif // COMPILE_H
-

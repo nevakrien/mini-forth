@@ -24,6 +24,16 @@ typedef enum : char {
     OP_CALL_DYN,
     OP_DROP,
     OP_DUP,
+    OP_SWAP,
+    OP_OVER,
+    OP_NIP,
+    OP_TUCK,
+    OP_ROT,
+    OP_NROT,
+    OP_2DUP,
+    OP_2DROP,
+    OP_2SWAP,
+    OP_2OVER,
 
     OP_PICK,
     OP_ROLL,
@@ -111,4 +121,3 @@ void vm_init(VM* vm);
 void vm_free(VM* vm);
 
 #endif // VM_H
-

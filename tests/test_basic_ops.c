@@ -227,6 +227,125 @@ static void test_pick_roll(void){
 	vm_free(&vm);
 }
 
+static void assert_source_stack(const char *src,
+                                const word_t *expected,
+                                size_t expected_len,
+                                const char *test_name)
+{
+    printf("%s: ", test_name);
+    fflush(stdout);
+
+    Lex lex;
+    lex_init(&lex);
+
+    TextStream text = {0};
+    text.start = src;
+    text.end   = src + strlen(src);
+
+    VM vm;
+    vm_init(&vm);
+
+    vm.lex   = &lex;
+    vm.input = text;
+
+    run_text(&vm);
+
+    size_t actual_len = vm.ds.len;
+
+    if (actual_len != expected_len) {
+        printf("FAILED\n");
+        fprintf(stderr,
+                "%s: stack length mismatch (expected %zu got %zu)\n",
+                test_name, expected_len, actual_len);
+
+        fprintf(stderr, "actual stack: ");
+        for (size_t i = 1; i < vm.ds.len; i++)
+            fprintf(stderr, "%td ", (sword_t)vm.ds.data[i]);
+
+        if (vm.ds.len)
+            fprintf(stderr, "%td ", (sword_t)vm.tos);
+
+        fprintf(stderr, "\n");
+
+        assert(0);
+    }
+
+    size_t idx = 0;
+
+    for (size_t i = 1; i < vm.ds.len; i++, idx++) {
+        if (vm.ds.data[i] != expected[idx]) {
+            printf("FAILED\n");
+            fprintf(stderr,
+                    "%s: mismatch at %zu (expected %td got %td)\n",
+                    test_name,
+                    idx,
+                    (sword_t)expected[idx],
+                    (sword_t)vm.ds.data[i]);
+            assert(0);
+        }
+    }
+
+    if (vm.ds.len) {
+        if (vm.tos != expected[idx]) {
+            printf("FAILED\n");
+            fprintf(stderr,
+                    "%s: mismatch at %zu (expected %td got %td)\n",
+                    test_name,
+                    idx,
+                    (sword_t)expected[idx],
+                    (sword_t)vm.tos);
+            assert(0);
+        }
+    }
+
+    printf("PASSED\n");
+
+    vm_free(&vm);
+    lex_free(&lex);
+}
+
+static void test_stack_words_source(void) {
+	{
+		const word_t expected[] = {2, 1};
+		assert_source_stack("1 2 swap", expected, 2, "test_swap_source");
+	}
+	{
+		const word_t expected[] = {1, 2, 1};
+		assert_source_stack("1 2 over", expected, 3, "test_over_source");
+	}
+	{
+		const word_t expected[] = {2};
+		assert_source_stack("1 2 nip", expected, 1, "test_nip_source");
+	}
+	{
+		const word_t expected[] = {2, 1, 2};
+		assert_source_stack("1 2 tuck", expected, 3, "test_tuck_source");
+	}
+	{
+		const word_t expected[] = {2, 3, 1};
+		assert_source_stack("1 2 3 rot", expected, 3, "test_rot_source");
+	}
+	{
+		const word_t expected[] = {3, 1, 2};
+		assert_source_stack("1 2 3 -rot", expected, 3, "test_nrot_source");
+	}
+	{
+		const word_t expected[] = {1, 2, 1, 2};
+		assert_source_stack("1 2 2dup", expected, 4, "test_2dup_source");
+	}
+	{
+		assert_source_stack("1 2 2drop", NULL, 0, "test_2drop_source");
+	}
+	{
+		const word_t expected[] = {3, 4, 1, 2};
+		assert_source_stack("1 2 3 4 2swap", expected, 4, "test_2swap_source");
+	}
+	{
+		const word_t expected[] = {1, 2, 3, 4, 1, 2};
+		assert_source_stack("1 2 3 4 2over", expected, 6, "test_2over_source");
+	}
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -237,6 +356,7 @@ int main(void){
 	test_run_loop();
 	test_end_to_end();
 	test_pick_roll();
+	test_stack_words_source();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;

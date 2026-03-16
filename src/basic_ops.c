@@ -50,6 +50,16 @@ void run_vm(VM *vm, const code_t *code) {
       [OP_RET] = &&op_ret,
       [OP_DROP] = &&op_drop,
       [OP_DUP] = &&op_dup,
+      [OP_SWAP] = &&op_swap,
+      [OP_OVER] = &&op_over,
+      [OP_NIP] = &&op_nip,
+      [OP_TUCK] = &&op_tuck,
+      [OP_ROT] = &&op_rot,
+      [OP_NROT] = &&op_nrot,
+      [OP_2DUP] = &&op_2dup,
+      [OP_2DROP] = &&op_2drop,
+      [OP_2SWAP] = &&op_2swap,
+      [OP_2OVER] = &&op_2over,
       [OP_PICK] = &&op_pick,
       [OP_ROLL] = &&op_roll,
 
@@ -116,6 +126,7 @@ op_ret:
   DISPATCH_STAY();
 
 op_branch:{
+    ASSERT(vm->ds.len >= 1);
     word_t cond= vm->tos;
     if(cond){
         goto op_jump;
@@ -153,10 +164,101 @@ op_drop:
   DISPATCH();
 
 op_dup:
+  ASSERT(vm->ds.len >= 1);
   PUSH(vm->tos);
   DISPATCH();
 
+op_swap: {
+  ASSERT(vm->ds.len >= 2);
+  word_t top = vm->tos;
+  word_t bottom = ARR_PEEK(vm->ds);
+  vm->tos = bottom;
+  ARR_PEEK(vm->ds)=top;
+  DISPATCH();
+}
+
+op_over:{
+  word_t bot = ARR_PEEK(vm->ds);
+  PUSH(bot);
+  DISPATCH();
+}
+
+op_nip:
+  ASSERT(vm->ds.len >= 2);
+  (void)ARR_POP(vm->ds);
+  DISPATCH();
+
+op_tuck: {
+  ASSERT(vm->ds.len >= 2);
+  word_t top = vm->tos;
+  word_t bottom = ARR_PEEK(vm->ds);
+  ARR_PEEK(vm->ds)=top;
+  ARR_PUSH(vm->ds, bottom);
+  vm->tos = top;
+  DISPATCH();
+}
+
+op_rot: {
+  ASSERT(vm->ds.len >= 3);
+  word_t c = vm->tos;
+  word_t b = ARR_POP(vm->ds);
+  word_t a = ARR_POP(vm->ds);
+  ARR_PUSH(vm->ds, b);
+  ARR_PUSH(vm->ds, c);
+  vm->tos = a;
+  DISPATCH();
+}
+
+op_nrot: {
+  ASSERT(vm->ds.len >= 3);
+  word_t c = vm->tos;
+  word_t b = ARR_POP(vm->ds);
+  word_t a = ARR_POP(vm->ds);
+  ARR_PUSH(vm->ds, c);
+  ARR_PUSH(vm->ds, a);
+  vm->tos = b;
+  DISPATCH();
+}
+
+op_2dup: {
+  ASSERT(vm->ds.len >= 2);
+  word_t b = vm->tos;
+  word_t a = ARR_PEEK(vm->ds);
+  PUSH(a);
+  PUSH(b);
+  DISPATCH();
+}
+
+op_2drop:
+  ASSERT(vm->ds.len >= 2);
+  DROP();
+  DROP();
+  DISPATCH();
+
+op_2swap: {
+  ASSERT(vm->ds.len >= 4);
+  word_t d = vm->tos;
+  word_t c = ARR_POP(vm->ds);
+  word_t b = ARR_POP(vm->ds);
+  word_t a = ARR_POP(vm->ds);
+  ARR_PUSH(vm->ds, c);
+  ARR_PUSH(vm->ds, d);
+  ARR_PUSH(vm->ds, a);
+  vm->tos = b;
+  DISPATCH();
+}
+
+op_2over: {
+  ASSERT(vm->ds.len >= 4);
+  word_t a = ARR_AT(vm->ds, vm->ds.len - 3);
+  word_t b = ARR_AT(vm->ds, vm->ds.len - 2);
+  PUSH(a);
+  PUSH(b);
+  DISPATCH();
+}
+
 op_pick: {
+    ASSERT(vm->ds.len >= 1);
     word_t depth = vm->tos;
     word_t idx = vm->ds.len - depth-1;
     
@@ -167,6 +269,8 @@ op_pick: {
 }
 
 op_roll: {
+    ASSERT(vm->ds.len >= 1);
+
     word_t depth = vm->tos;
     word_t idx = vm->ds.len - depth-1;
     
@@ -184,6 +288,7 @@ op_roll: {
 } 
 
 #define BASIC_ARITH(name, oper)                                                \
+  ASSERT(vm->ds.len >= 2);                                                      \
   op_##name : vm->tos = vm->tos oper ARR_POP(vm->ds);                          \
   DISPATCH();
 
@@ -194,6 +299,8 @@ op_roll: {
   BASIC_ARITH(mod, %)
 
 op_dot:
+  ASSERT(vm->ds.len >= 1);
+
   printf("%td\n", (sword_t)vm->tos);
   DROP();
   DISPATCH();
@@ -220,18 +327,24 @@ op_call: {
 }
 
 op_call_dyn: {
+  ASSERT(vm->ds.len >= 1);
+
   code = (code_t *)vm->tos;
   DROP();
   DISPATCH_STAY();
 }
 
 op_word_call_ptr: {
+  ASSERT(vm->ds.len >= 1);
+
   const Word *f = (const Word *)vm->tos;
   vm->tos = (word_t)f->code.data;
   DISPATCH();
 }
 
 op_compile_code: {
+  ASSERT(vm->ds.len >= 1);
+
   const Word *f = (const Word *)vm->tos;
   DROP();
   compile_later(&vm->comp, f);
@@ -247,6 +360,8 @@ op_next_token: {
 }
 
 op_find_word: {
+  ASSERT(vm->ds.len >= 2);
+
   const char *text = (void *)ARR_POP(vm->ds);
   size_t len = (size_t)vm->tos;
   vm->tos = (word_t)lex_find(vm->lex, text, len);
@@ -274,6 +389,7 @@ op_find_word: {
   // ---------- Function End Core ----------
 
 #define FUNC_END_COMMON(EXTRA)                                                 \
+  ASSERT(vm->ds.len >= 2);                                                    \
   word_t tag = vm->tos;                                                        \
   if (tag != 0) {                                                              \
     printf("wrong tag in return statment\n");                                  \
