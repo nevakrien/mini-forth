@@ -95,8 +95,8 @@ static void test_sub(void){
 
 	run_vm(&vm, vm.comp.data);
 
-	assert((word_t)-70 == vm.tos && "30 - 100 == -70");
-	printf("test_sub: PASSED (-70)\n");
+	assert((word_t)70 == vm.tos && "100 - 30  == 70");
+	printf("test_sub: PASSED (70)\n");
 
 	vm_free(&vm);
 }
@@ -346,6 +346,68 @@ static void test_stack_words_source(void) {
 	}
 }
 
+static void test_comparison_words_source(void) {
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("5 5 =", expected, 1, "test_eq_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("5 7 ~=", expected, 1, "test_ne_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("5 2 <", expected, 1, "test_lt_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("2 5 >", expected, 1, "test_gt_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("5 5 <=", expected, 1, "test_le_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("5 5 >=", expected, 1, "test_ge_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("0 0=", expected, 1, "test_0eq_source");
+	}
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("7 0~=", expected, 1, "test_0ne_source");
+	}
+}
+
+static void test_bitwise_words_source(void) {
+	{
+		const word_t expected[] = {1};
+		assert_source_stack("5 3 &", expected, 1, "test_and_source");
+	}
+	{
+		const word_t expected[] = {7};
+		assert_source_stack("5 3 |", expected, 1, "test_or_source");
+	}
+	{
+		const word_t expected[] = {6};
+		assert_source_stack("5 3 ^", expected, 1, "test_xor_source");
+	}
+	{
+		const word_t expected[] = {(word_t)~(word_t)5};
+		assert_source_stack("5 ~", expected, 1, "test_not_source");
+	}
+	{
+		const word_t expected[] = {8};
+		assert_source_stack("1 3 <<", expected, 1, "test_shl_source");
+	}
+	{
+		const word_t expected[] = {4};
+		assert_source_stack("32 3 >>", expected, 1, "test_shr_source");
+	}
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -357,6 +419,8 @@ int main(void){
 	test_end_to_end();
 	test_pick_roll();
 	test_stack_words_source();
+	test_comparison_words_source();
+	test_bitwise_words_source();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;

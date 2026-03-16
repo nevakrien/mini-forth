@@ -68,6 +68,20 @@ void run_vm(VM *vm, const code_t *code) {
       [OP_MUL] = &&op_mul,
       [OP_DIV] = &&op_div,
       [OP_MOD] = &&op_mod,
+      [OP_EQ] = &&op_eq,
+      [OP_NE] = &&op_ne,
+      [OP_LT] = &&op_lt,
+      [OP_GT] = &&op_gt,
+      [OP_LE] = &&op_le,
+      [OP_GE] = &&op_ge,
+      [OP_ZEQ] = &&op_zeq,
+      [OP_ZNE] = &&op_zne,
+      [OP_BIT_AND] = &&op_bit_and,
+      [OP_BIT_OR] = &&op_bit_or,
+      [OP_BIT_XOR] = &&op_bit_xor,
+      [OP_BIT_NOT] = &&op_bit_not,
+      [OP_SHL] = &&op_shl,
+      [OP_SHR] = &&op_shr,
       [OP_PUSH_RS] = &&op_push_rs,
       [OP_POP_RS] = &&op_pop_rs,
       [OP_PEEK_RS] = &&op_peek_rs,
@@ -287,16 +301,52 @@ op_roll: {
     DISPATCH();
 } 
 
-#define BASIC_ARITH(name, oper)                                                \
-  ASSERT(vm->ds.len >= 2);                                                      \
-  op_##name : vm->tos = vm->tos oper ARR_POP(vm->ds);                          \
-  DISPATCH();
-
+#define BASIC_ARITH(name, oper) \
+  op_##name: { \
+    ASSERT(vm->ds.len >= 2); \
+    word_t rhs = vm->tos; \
+    word_t lhs = ARR_POP(vm->ds); \
+    vm->tos = (lhs oper rhs); \
+    DISPATCH(); \
+  }
+  
   BASIC_ARITH(add, +)
   BASIC_ARITH(sub, -)
   BASIC_ARITH(mul, *)
   BASIC_ARITH(div, /)
   BASIC_ARITH(mod, %)
+  BASIC_ARITH(bit_and, &)
+  BASIC_ARITH(bit_or, |)
+  BASIC_ARITH(bit_xor, ^)
+  BASIC_ARITH(shl, <<)
+  BASIC_ARITH(shr, >>)
+
+
+#define BASIC_CMP(name, oper)                                                  \
+  ASSERT(vm->ds.len >= 2);                                                     \
+  op_##name : vm->tos = (word_t)(vm->tos oper ARR_POP(vm->ds));               \
+  DISPATCH();
+
+  BASIC_CMP(eq, ==)
+  BASIC_CMP(ne, !=)
+  BASIC_CMP(lt, <)
+  BASIC_CMP(gt, >)
+  BASIC_CMP(le, <=)
+  BASIC_CMP(ge, >=)
+
+op_zeq:
+  ASSERT(vm->ds.len >= 1);
+  vm->tos = (word_t)(vm->tos == 0);
+  DISPATCH();
+
+op_zne:
+  ASSERT(vm->ds.len >= 1);
+  vm->tos = (word_t)(vm->tos != 0);
+  DISPATCH();
+op_bit_not:
+  ASSERT(vm->ds.len >= 1);
+  vm->tos = ~vm->tos;
+  DISPATCH();
 
 op_dot:
   ASSERT(vm->ds.len >= 1);

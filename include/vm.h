@@ -43,6 +43,22 @@ typedef enum : char {
     OP_MUL,
     OP_DIV,
     OP_MOD,
+
+    OP_EQ,
+    OP_NE,
+    OP_LT,
+    OP_GT,
+    OP_LE,
+    OP_GE,
+    OP_ZEQ,
+    OP_ZNE,
+
+    OP_BIT_AND,
+    OP_BIT_OR,
+    OP_BIT_XOR,
+    OP_BIT_NOT,
+    OP_SHL,
+    OP_SHR,
     
     OP_PUSH_RS,
     OP_POP_RS,
