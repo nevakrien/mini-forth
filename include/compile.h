@@ -21,12 +21,23 @@ typedef struct Lex{
     LexEntry* entries;
 } Lex;
 
+typedef enum : word_t{
+    COMP_TAG_FUNC,
+    COMP_TAG_IF,
+} comp_tag_t;
 
 static inline void comp_push_word(Comp* comp,word_t c){
 	ARR_ENSURE_CAP(*comp,comp->len+sizeof(c));
 	comp->len+=sizeof(c);
 	memcpy(&comp->data[comp->len-sizeof(c)],&c,sizeof(c));
 }
+
+static inline void comp_push_offset(Comp* comp,boffset_t c){
+    ARR_ENSURE_CAP(*comp,comp->len+sizeof(c));
+    comp->len+=sizeof(c);
+    memcpy(&comp->data[comp->len-sizeof(c)],&c,sizeof(c));
+}
+
 
 static inline void comp_push_code(Comp* comp,code_t c){
 	ARR_PUSH(*comp,c);
@@ -127,6 +138,7 @@ static inline void lex_init(Lex* lex) {
         { OP_PUSH_RS, ">r" },
         { OP_POP_RS, "r>" },
         { OP_PEEK_RS, "r@" },
+        { OP_RET, "ret" },
         { OP_DONE, "bye" },
         { OP_COMPILE_CODE, "compile," },
         { OP_COMPILE_LOOP, "compile-loop" },
@@ -135,6 +147,9 @@ static inline void lex_init(Lex* lex) {
         { OP_NEXT_TOKEN, "next-token" },
         { OP_DOT, "." },
         { OP_DOT_S, ".s" },
+        { OP_COMP_IDX, "comp-idx" },
+        { OP_COMPILE_JUMP, "compile-jump" },
+        { OP_COMPILE_BRANCH, "compile-branch" },
     };
     size_t num_ops = sizeof(simple) / sizeof(simple[0]);
     for(size_t i=0;i<num_ops;i++){
@@ -147,6 +162,7 @@ static inline void lex_init(Lex* lex) {
     }
 
     struct { code_t op; char* name; } simple_now[] = {
+        { OP_COMPILE_CONST_PRINT, ".\"" },
         { OP_FUNC_START, ":" },
         { OP_NOW_FUNC_START, "now:" },
         { OP_FUNC_END, ";" },

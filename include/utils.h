@@ -62,8 +62,19 @@ static inline void* xrealloc(void* p, size_t sz) {
     } \
 })
 
+
+#define ARR_MAKE_ROOM(arr, extra) \
+    ARR_ENSURE_CAP(arr, (arr).len + (extra))
+
+#define ARR_EXTEND(arr, src, n) \
+    ( \
+        ARR_MAKE_ROOM(arr, n), \
+        memcpy((arr).data + (arr).len, (src), (size_t)(n) * sizeof(*(arr).data)), \
+        (arr).len += (size_t)(n) \
+    )
+
 #define ARR_PUSH(arr, x) \
-(ARR_ENSURE_CAP(arr, (arr).len + 1), (arr).data[(arr).len] = (x), (arr).len++)
+(ARR_MAKE_ROOM(arr, 1), (arr).data[(arr).len] = (x), (arr).len++)
 
 
 #endif // UTILS_H

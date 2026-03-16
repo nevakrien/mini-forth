@@ -8,6 +8,8 @@
 typedef uintptr_t word_t;
 typedef intptr_t sword_t;
 
+//offset MUST always fits in word_t
+//since pointer is at least 16bit thats fine
 typedef int16_t boffset_t;
 
 typedef struct {
@@ -19,6 +21,8 @@ typedef struct {
 typedef enum : char {
     OP_DONE=0,
     OP_PUSH_CONST,
+    OP_CONST_PRINT,
+    OP_COMPILE_CONST_PRINT,
     OP_CALL,
     OP_RET,
     OP_CALL_DYN,
@@ -83,10 +87,9 @@ typedef enum : char {
     OP_BRANCH,
     OP_JUMP,
 
-    // //these are comptime for inserting branches
-    // OP_IF,
-    // OP_ELSE,
-    // OP_END,
+    OP_COMP_IDX,
+    OP_COMPILE_JUMP,
+    OP_COMPILE_BRANCH,
 
     OP_LAST,
 } code_t;

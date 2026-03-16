@@ -39,12 +39,15 @@ static inline int parse_number(word_t *ans, const char *name, size_t name_len) {
   return 0;
 }
 
+
 void run_vm(VM *vm, const code_t *code) {
   // puts("run_vm start");
 
   static const void *const dispatch[] = {
       [OP_DONE] = &&op_done,
       [OP_PUSH_CONST] = &&op_push_const,
+      [OP_CONST_PRINT] = &&op_const_print,
+      [OP_COMPILE_CONST_PRINT] = &&op_compile_const_print,
       [OP_CALL] = &&op_call,
       [OP_CALL_DYN] = &&op_call_dyn,
       [OP_RET] = &&op_ret,
@@ -101,10 +104,15 @@ void run_vm(VM *vm, const code_t *code) {
 
       [OP_BRANCH] = &&op_branch,
       [OP_JUMP] = &&op_jump,
+
+      [OP_COMP_IDX] = &&op_comp_idx,
+      [OP_COMPILE_JUMP] = &&op_compile_jump,
+      [OP_COMPILE_BRANCH] = &&op_compile_branch,
   };
 
   // static const code_t code_run_loop[]  = {OP_RUN_LOOP,OP_RET};
   static const code_t code_compile_loop[] = {OP_COMPILE_LOOP, OP_RET};
+
 
 #define DISPATCH() goto *dispatch[*++code]
 #define DISPATCH_STAY() goto *dispatch[*code]
@@ -135,6 +143,60 @@ op_push_const: {
   DISPATCH_STAY();
 }
 
+op_const_print: {
+    word_t len = 0;
+
+    memcpy(&len, ++code, sizeof(word_t));
+    code += sizeof(word_t);
+
+    fwrite((const char *)code, 1, (size_t)len, stdout);
+
+    code += len;
+
+    DISPATCH_STAY();
+}
+
+op_compile_const_print: {
+    ARR_PUSH(vm->comp, OP_CONST_PRINT);
+
+    size_t len_pos = vm->comp.len;
+    comp_push_word(&vm->comp, 0);   // placeholder for length
+
+    size_t start = vm->comp.len;
+
+    //skip the first space
+    if(vm->input.start != vm->input.end)
+        vm->input.start++;
+    
+    for (;;) {
+        if (vm->input.start == vm->input.end) {
+            printf("unclosed delimiter\n");
+            return;
+        }
+
+        if (*vm->input.start == '"') {
+            vm->input.start++;
+            break;
+        }
+
+        if (*vm->input.start == '\\') {
+            if(*++vm->input.start=='n'){
+                ARR_PUSH(vm->comp,'\n');
+                vm->input.start++;
+                continue;
+            }
+        }
+
+        ARR_PUSH(vm->comp, *vm->input.start++);
+    }
+
+    word_t len = vm->comp.len - start;
+
+    memcpy(&ARR_AT(vm->comp, len_pos), &len, sizeof(word_t));
+
+    DISPATCH();
+}
+
 op_ret:
   code = (code_t *)ARR_POP(vm->rs);
   DISPATCH_STAY();
@@ -150,6 +212,9 @@ op_branch:{
     DISPATCH_STAY();
 }
 
+op_comp_idx:
+    PUSH(vm->comp.len);
+    DISPATCH();
 
 op_jump:{
     boffset_t offset = 0;
@@ -157,6 +222,26 @@ op_jump:{
 
     code+=offset;
     DISPATCH_STAY();
+}
+
+op_compile_jump:{
+    //offset always fits in word_t
+    boffset_t offset = (boffset_t)vm->tos;
+    DROP();
+
+    ARR_PUSH(vm->comp,OP_JUMP);
+    comp_push_offset(&vm->comp,offset);
+    DISPATCH();
+}
+
+op_compile_branch:{
+    //offset always fits in word_t
+    boffset_t offset = (boffset_t)vm->tos;
+    DROP();
+
+    ARR_PUSH(vm->comp,OP_BRANCH);
+    comp_push_offset(&vm->comp,offset);
+    DISPATCH();
 }
 
 
@@ -419,7 +504,7 @@ op_find_word: {
     LexEntry *entry = make_lex_entry(tok.start, tok.end - tok.start);          \
     EXTRA                                                                      \
     PUSH((word_t)entry);                                                       \
-    PUSH(0);                                                                   \
+    PUSH(COMP_TAG_FUNC);                                                       \
     DISPATCH_CALL(code_compile_loop);                                          \
   }
 
@@ -434,7 +519,7 @@ op_find_word: {
 #define FUNC_END_COMMON(EXTRA)                                                 \
   ASSERT(vm->ds.len >= 2);                                                    \
   word_t tag = vm->tos;                                                        \
-  if (tag != 0) {                                                              \
+  if (tag != COMP_TAG_FUNC) {                                                  \
     printf("wrong tag in return statment\n");                                  \
     return;                                                                    \
   }                                                                            \
