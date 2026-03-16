@@ -3,6 +3,11 @@
 
 void vm_init(VM* vm){
 	*vm = (VM){0};
+
+#ifndef NDEBUG
+	//sentinal value so errors are obvious
+	vm->tos = 69;
+#endif
 }
 
 void vm_free(VM* vm){
