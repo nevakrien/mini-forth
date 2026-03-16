@@ -71,6 +71,8 @@ void run_vm(VM *vm, const code_t *code) {
       [OP_FUNC_END] = &&op_func_end,
       [OP_FUNC_INLINE_END] = &&op_func_inline_end,
       [OP_FUNC_OUTLINE_END] = &&op_func_outline_end,
+      [OP_PICK] = &&op_pick,
+      [OP_ROLL] = &&op_roll,
 
   };
 
@@ -130,6 +132,29 @@ op_drop:
 op_dup:
   PUSH(vm->tos);
   DISPATCH();
+
+op_pick: {
+    word_t depth = vm->tos;
+    word_t idx = vm->ds.len - depth-1;
+    vm->tos = ARR_AT(vm->ds, idx);
+    DISPATCH();
+}
+
+op_roll: {
+    word_t depth = vm->tos;
+    word_t idx = vm->ds.len - depth-1;
+    
+    vm->tos = ARR_AT(vm->ds, idx);
+
+    memmove(
+        &ARR_AT(vm->ds, idx),
+        &ARR_AT(vm->ds, idx + 1),
+        ( (vm->ds.len - 1) - idx ) * sizeof(word_t)
+    );
+
+    vm->ds.len--;
+    DISPATCH();
+} 
 
 #define BASIC_ARITH(name, oper)                                                \
   op_##name : vm->tos = vm->tos oper ARR_POP(vm->ds);                          \

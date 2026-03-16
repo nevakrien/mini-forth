@@ -170,6 +170,63 @@ static void test_end_to_end(){
     lex_free(&lex);
 }
 
+static void test_pick_roll(void){
+	VM vm;
+	vm_init(&vm);
+
+	// start: 1 2 3 4
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 1);
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 2);
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 3);
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 4);
+
+	// 2 pick
+	// stack before pick (after consuming index): 1 2 3 4
+	// result: 1 2 3 4 2
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 2);
+	comp_push_code(&vm.comp, OP_PICK);
+	
+
+	// 3 roll
+	// stack before roll (after consuming index): 1 2 3 4 2
+	// result: 1 3 4 2 2
+	comp_push_code(&vm.comp, OP_PUSH_CONST);
+	comp_push_word(&vm.comp, 3);
+	comp_push_code(&vm.comp, OP_ROLL);
+
+	comp_push_code(&vm.comp, OP_DONE);
+
+	run_vm(&vm, vm.comp.data);
+
+	assert(vm.ds.len == 5);
+
+	// final logical stack is: 1 3 4 2 2
+	// so popping from top should give: 2, 2, 4, 3, 1
+
+	assert(vm.tos == 2);
+	vm.tos = ARR_POP(vm.ds);
+
+	assert(vm.tos == 2);
+	vm.tos = ARR_POP(vm.ds);
+
+	assert(vm.tos == 4);
+	vm.tos = ARR_POP(vm.ds);
+
+	assert(vm.tos == 3);
+	vm.tos = ARR_POP(vm.ds);
+
+	assert(vm.tos == 1);
+
+	printf("test_pick_roll: PASSED\n");
+
+	vm_free(&vm);
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -179,6 +236,7 @@ int main(void){
 	test_call();
 	test_run_loop();
 	test_end_to_end();
+	test_pick_roll();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;

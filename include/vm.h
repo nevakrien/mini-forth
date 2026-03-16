@@ -22,6 +22,9 @@ typedef enum : char {
     OP_CALL_DYN,
     OP_DROP,
     OP_DUP,
+
+    OP_PICK,
+    OP_ROLL,
     
     OP_ADD,
     OP_SUB,

@@ -93,6 +93,8 @@ static inline void lex_init(Lex* lex) {
     struct { code_t op; char* name; } simple[] = {
         { OP_DROP, "drop" },
         { OP_DUP, "dup" },
+        { OP_PICK, "pick" },
+        { OP_ROLL, "roll" },
         { OP_ADD, "+" },
         { OP_SUB, "-" },
         { OP_MUL, "*" },
