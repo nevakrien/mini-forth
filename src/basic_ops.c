@@ -1,9 +1,32 @@
 #include "basic_ops.h"
+#include "utils.h"
 #include "compile.h"
 #include <stdio.h>
 
 #define PUSH(x) (ARR_PUSH(vm->ds,vm->tos),vm->tos=x)
 #define DROP() (vm->tos = ARR_POP(vm->ds))
+
+static inline int parse_number(word_t* ans,const char* name, size_t name_len){
+    bool saw_minus=false;
+    *ans = 0;
+    if(name_len==0) return -1;
+    if(name[0]=='-'){
+        saw_minus=true;
+        name+=1;
+        name_len-=1;
+    }
+
+    for(size_t i=0;i<name_len;i++){
+        unsigned char c = name[i];
+        c-='0';
+        if(c>9) return -1;
+        *ans=*ans*10+c;
+    }
+    if(saw_minus){
+        *ans*=-1;
+    }
+    return 0;
+}
 
 void run_vm(VM* vm, code_t* code){
 
@@ -27,6 +50,7 @@ void run_vm(VM* vm, code_t* code){
         [OP_WORD_CALL_PTR] = &&op_word_call_ptr,
         [OP_NEXT_TOKEN] = &&op_next_token,
         [OP_FIND_WORD] = &&op_find_word,
+        [OP_COMPILE_LOOP]=&&op_compile_loop,
         [OP_DOT] = &&op_dot,
         [OP_DOT_S] = &&op_dot_s,
 
@@ -75,6 +99,38 @@ op_compile_code: {
     DROP();
     compile_later(&vm->comp,f);
     DISPATCH();
+}
+
+op_compile_loop:{
+    TextStream tok = next_token(&vm->input);
+    if(tok.start==tok.end) DISPATCH();
+    const char* text = tok.start;
+    size_t len = tok.end-tok.start;
+
+    const Word* w= lex_find(vm->lex,text,len);
+
+    if(w) {
+        if(w->is_now){
+            ARR_PUSH(vm->rs,(word_t)&&op_compile_loop);
+            code=w->code.data;
+            DISPATCH();
+        }
+        else{
+            compile_later(&vm->comp, w);
+            goto op_compile_loop;
+        }
+    }
+
+    word_t num = 0;
+    if(parse_number(&num,text,len)) {
+        fprintf(stderr, "error: unrecognized token '%.*s'\n",
+                (int)len, text);
+        return;
+    };
+
+    comp_push_code(&vm->comp,OP_PUSH_CONST);
+    comp_push_word(&vm->comp,num);
+    goto op_compile_loop;
 }
 
 op_next_token: {

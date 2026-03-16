@@ -36,6 +36,7 @@ typedef enum : char {
     OP_NEXT_TOKEN,
     OP_FIND_WORD,
     OP_COMPILE_CODE,
+    OP_COMPILE_LOOP,
     OP_WORD_CALL_PTR,
 
     OP_DOT,

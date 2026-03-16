@@ -65,5 +65,6 @@ static inline void* xrealloc(void* p, size_t sz) {
 #define ARR_PUSH(arr, x) \
 (ARR_ENSURE_CAP(arr, (arr).len + 1), (arr).data[(arr).len] = (x), (arr).len++)
 
+
 #endif // UTILS_H
 

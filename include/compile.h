@@ -44,16 +44,6 @@ static inline void compile_later(Comp* comp, const Word* w){
     }
 }
 
-static inline void compile_word(VM* vm, const Word* w){
-    if(w->is_now)
-        run_vm(vm, w->code.data);
-    else
-        compile_later(&vm->comp, w);
-}
-
-
-
-
 static inline void destroy_word(Word* word){
 	free(word->code.data);
 	word->code.data=NULL;
@@ -87,7 +77,7 @@ static inline Word* lex_define(Lex* lex, const char* name, size_t name_len) {
 }
 
 static inline void lex_init(Lex* lex) {
-    struct { code_t op; char* name; } known[] = {
+    struct { code_t op; char* name; } simple[] = {
         { OP_DROP, "drop" },
         { OP_DUP, "dup" },
         { OP_ADD, "+" },
@@ -100,78 +90,32 @@ static inline void lex_init(Lex* lex) {
         { OP_PEEK_RS, "r@" },
         { OP_DONE, "bye" },
         { OP_COMPILE_CODE, "compile," },
+        { OP_COMPILE_LOOP, "compile-loop" },
         { OP_WORD_CALL_PTR, "run-word" },
         { OP_FIND_WORD, "find-word" },
         { OP_NEXT_TOKEN, "next-token" },
         { OP_DOT, "." },
         { OP_DOT_S, ".s" },
     };
-    size_t num_ops = sizeof(known) / sizeof(known[0]);
+    size_t num_ops = sizeof(simple) / sizeof(simple[0]);
     for(size_t i=0;i<num_ops;i++){
-        Word* word = lex_define(lex, known[i].name, strlen(known[i].name));
+        Word* word = lex_define(lex, simple[i].name, strlen(simple[i].name));
         word->is_inline = true;
         word->code.len = 2;
         word->code.data = xmalloc(sizeof(code_t) * 2);
-        word->code.data[0] = known[i].op;
+        word->code.data[0] = simple[i].op;
         word->code.data[1] = OP_RET;
     }
+
+    // struct { code_t op[10]; char* name; } now[] = {
+    //     [OP_]
+    // };
 }
 
-static inline int parse_number(word_t* ans,const char* name, size_t name_len){
-    bool saw_minus=false;
-    *ans = 0;
-    if(name_len==0) return -1;
-    if(name[0]=='-'){
-        saw_minus=true;
-        name+=1;
-        name_len-=1;
-    }
-
-    for(size_t i=0;i<name_len;i++){
-        unsigned char c = name[i];
-        c-='0';
-        if(c>9) return -1;
-        *ans=*ans*10+c;
-    }
-    if(saw_minus){
-        *ans*=-1;
-    }
-    return 0;
-}
-
-static inline int compile_token(VM* vm,const char* name, size_t name_len){
-    Word* word =lex_find(vm->lex,name,name_len);
-    if(word) {
-        compile_word(vm,word);
-        return 0;
-    }
-
-    word_t num = 0;
-    if(parse_number(&num,name,name_len)) return 1;
-
-    comp_push_code(&vm->comp,OP_PUSH_CONST);
-    comp_push_word(&vm->comp,num);
-    return 0;
-}
-
-static inline int compile_text(VM* vm){
-    TextStream token = next_token(&vm->input);
-
-    size_t tok_len = token.end-token.start;
-    if(tok_len == 0) return 0;
-
-    if(compile_token(vm,token.start,tok_len)){
-        fprintf(stderr, "error: unrecognized token '%.*s'\n",
-                (int)tok_len, token.start);
-        return 1;
-    }
-
-    return compile_text(vm);
-}
 
 static inline int run_text(VM* vm){
-    if(compile_text(vm))
-        return 1;
+    code_t code[]={OP_COMPILE_LOOP,OP_DONE};
+    run_vm(vm,code);
 
     ARR_PUSH(vm->comp,OP_DONE);
     
