@@ -136,7 +136,10 @@ op_dup:
 op_pick: {
     word_t depth = vm->tos;
     word_t idx = vm->ds.len - depth-1;
+    
+    ASSERT(idx!=0);
     vm->tos = ARR_AT(vm->ds, idx);
+    
     DISPATCH();
 }
 
@@ -144,11 +147,12 @@ op_roll: {
     word_t depth = vm->tos;
     word_t idx = vm->ds.len - depth-1;
     
+    ASSERT(idx!=0);
     vm->tos = ARR_AT(vm->ds, idx);
 
     memmove(
-        &ARR_AT(vm->ds, idx),
-        &ARR_AT(vm->ds, idx + 1),
+        vm->ds.data+idx,
+        vm->ds.data+idx+1,
         ( (vm->ds.len - 1) - idx ) * sizeof(word_t)
     );
 
