@@ -77,6 +77,8 @@ static inline Word* lex_define(Lex* lex, const char* name, size_t name_len) {
 }
 
 static inline void lex_init(Lex* lex) {
+    lex->entries=NULL;
+
     struct { code_t op; char* name; } simple[] = {
         { OP_DROP, "drop" },
         { OP_DUP, "dup" },
@@ -113,29 +115,10 @@ static inline void lex_init(Lex* lex) {
 }
 
 
-static inline int run_text(VM* vm){
-    code_t code[]={OP_COMPILE_LOOP,OP_DONE};
+static inline void run_text(VM* vm){
+    code_t code[]={OP_RUN_LOOP,OP_DONE};
     run_vm(vm,code);
-
-    ARR_PUSH(vm->comp,OP_DONE);
-    
-    //we wana run on data while also exposing a comp stack
-    //so we need to store the stack here for a bit
-    Comp comp = vm->comp;
-    comp.len=0;
-    vm->comp=(Comp){0};
-
-    run_vm(vm,comp.data);
-    
-    //check if we can reuse the exising memory
-    if(vm->comp.data){
-        free(comp.data);
-    }
-    else{
-        vm->comp=comp;
-    }
-    
-    return 0;
+    return;
 }
 
 

@@ -36,10 +36,7 @@ int main(void){
 
         vm.input.start=line;
         vm.input.end =line + len;
-
-        if(run_text(&vm)){
-            // printf("Error running: %s\n", line);
-        }
+        run_text(&vm);
     }
 
     lex_free(&lex);

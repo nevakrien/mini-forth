@@ -128,6 +128,27 @@ static void test_call(void){
 	vm_free(&vm);
 }
 
+static void test_run_loop(){
+	Lex lex;
+    lex_init(&lex);
+
+    TextStream text ={0};
+    text.start = "1 2 +";
+    text.end = text.start+strlen(text.start);
+
+    VM vm;
+	vm_init(&vm);
+
+	vm.lex=&lex;
+	vm.input=text;
+	run_text(&vm);
+	assert(vm.tos==3);
+	printf("test_run_loop: PASSED (3)\n");
+
+	vm_free(&vm);
+    lex_free(&lex);
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -135,6 +156,7 @@ int main(void){
 	test_dup_drop();
 	test_sub();
 	test_call();
+	test_run_loop();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;

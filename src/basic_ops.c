@@ -51,6 +51,7 @@ void run_vm(VM* vm, code_t* code){
         [OP_NEXT_TOKEN] = &&op_next_token,
         [OP_FIND_WORD] = &&op_find_word,
         [OP_COMPILE_LOOP]=&&op_compile_loop,
+        [OP_RUN_LOOP]=&&op_run_loop,
         [OP_DOT] = &&op_dot,
         [OP_DOT_S] = &&op_dot_s,
 
@@ -111,7 +112,7 @@ op_compile_loop:{
 
     if(w) {
         if(w->is_now){
-            ARR_PUSH(vm->rs,(word_t)&&op_compile_loop);
+            ARR_PUSH(vm->rs,(word_t)(code-1));
             code=w->code.data;
             DISPATCH();
         }
@@ -131,6 +132,29 @@ op_compile_loop:{
     comp_push_code(&vm->comp,OP_PUSH_CONST);
     comp_push_word(&vm->comp,num);
     goto op_compile_loop;
+}
+
+op_run_loop:{
+    TextStream tok = next_token(&vm->input);
+    if(tok.start==tok.end) DISPATCH();
+    const char* text = tok.start;
+    size_t len = tok.end-tok.start;
+
+    const Word* w= lex_find(vm->lex,text,len);
+    if(w) {
+        ARR_PUSH(vm->rs,(word_t)(code-1));
+        code=w->code.data;
+        DISPATCH();
+    }
+
+    word_t num = 0;
+    if(parse_number(&num,text,len)) {
+        fprintf(stderr, "error: unrecognized token '%.*s'\n",
+                (int)len, text);
+        return;
+    };
+    PUSH(num);
+    goto op_run_loop;
 }
 
 op_next_token: {
