@@ -81,6 +81,12 @@ void run_vm(VM* vm, const code_t* code){
         code=(tgt);\
         DISPATCH();\
     } while(0)
+
+#define DISPATCH_LOOPING_CALL(tgt) do {\
+        ARR_PUSH(vm->rs,(word_t)(code-1));\
+        code=(tgt);\
+        DISPATCH();\
+    } while(0)
     
 
     DISPATCH();
@@ -196,67 +202,67 @@ op_find_word: {
     DISPATCH();
 }
 
-op_func_start:{
-    TextStream tok = next_token(&vm->input);
-    LexEntry* entry = make_lex_entry(tok.start,tok.end-tok.start);
-    PUSH((word_t)entry);
-    DISPATCH_CALL(code_compile_loop);
+// ---------- Function Start ----------
+
+#define OP_FUNC_START(name, EXTRA)            \
+name:{                                        \
+    TextStream tok = next_token(&vm->input);  \
+    LexEntry* entry = make_lex_entry(tok.start, tok.end - tok.start); \
+    EXTRA                                      \
+    PUSH((word_t)entry);                       \
+    PUSH(0);                                    \
+    DISPATCH_CALL(code_compile_loop);          \
 }
 
-op_now_func_start:{
-    TextStream tok = next_token(&vm->input);
-    LexEntry* entry = make_lex_entry(tok.start,tok.end-tok.start);
-    entry->word.is_now=true;
-    PUSH((word_t)entry);
-    DISPATCH_CALL(code_compile_loop);
-}
+OP_FUNC_START(op_func_start,
+    /* nothing */
+)
 
-op_func_outline_end:{
-    // puts("runing func end");
+OP_FUNC_START(op_now_func_start,
+    entry->word.is_now = true;
+)
 
-    LexEntry* entry = (LexEntry*)vm->tos;
-    DROP();
 
-    ARR_PUSH(vm->comp,OP_RET);
-    entry->word.code = take_comp(vm);
+// ---------- Function End Core ----------
 
-    ASSERT(vm->lex);
-    lex_insert_entry(vm->lex,entry); 
-    
+#define FUNC_END_COMMON(EXTRA)                \
+    word_t tag = vm->tos;                      \
+    if(tag!=0) {\
+        printf("wrong tag in return statment\n");\
+        return;\
+    }\
+    DROP();\
+    LexEntry* entry = (LexEntry*)vm->tos;     \
+    DROP();                                   \
+                                             \
+    ARR_PUSH(vm->comp, OP_RET);               \
+    entry->word.code = take_comp(vm);         \
+                                             \
+    EXTRA                                     \
+                                             \
+    ASSERT(vm->lex);                          \
+    lex_insert_entry(vm->lex, entry);         \
+                                             \
     goto op_ret;
-}
 
-op_func_inline_end:{
-    LexEntry* entry = (LexEntry*)vm->tos;
-    DROP();
-    
-    ARR_PUSH(vm->comp,OP_RET);
-    entry->word.code = take_comp(vm);
+
+// ---------- Function End Variants ----------
+
+#define OP_FUNC_END(name, EXTRA) \
+name:{ FUNC_END_COMMON(EXTRA) }
+
+OP_FUNC_END(op_func_outline_end,
+    /* nothing */
+)
+
+OP_FUNC_END(op_func_inline_end,
     entry->word.is_inline = true;
+)
 
-    ASSERT(vm->lex);
-    lex_insert_entry(vm->lex,entry); 
-
-    goto op_ret;
-}
-
-op_func_end:{
-    LexEntry* entry = (LexEntry*)vm->tos;
-    DROP();
-    
-    ARR_PUSH(vm->comp,OP_RET);
-    entry->word.code = take_comp(vm);
-
-    //inline functions which would be more expensive to call
-    if(entry->word.code.len <= sizeof(word_t)+1)
+OP_FUNC_END(op_func_end,
+    if (entry->word.code.len <= sizeof(word_t) + 1)
         entry->word.is_inline = true;
-
-    ASSERT(vm->lex);
-    lex_insert_entry(vm->lex,entry); 
-
-    goto op_ret;
-}
-
+)
 
 op_compile_loop:{
     // puts("runing compile loop");
@@ -270,7 +276,7 @@ op_compile_loop:{
 
     if(w) {
         if(w->is_now){
-            DISPATCH_CALL(w->code.data);
+            DISPATCH_LOOPING_CALL(w->code.data);
         }
         else{
             compile_later(&vm->comp, w);
@@ -300,7 +306,7 @@ op_run_loop:{
 
     const Word* w= lex_find(vm->lex,text,len);
     if(w) {
-        DISPATCH_CALL(w->code.data);
+        DISPATCH_LOOPING_CALL(w->code.data);
     }
 
     word_t num = 0;
