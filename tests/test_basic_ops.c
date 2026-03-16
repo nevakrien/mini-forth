@@ -356,11 +356,11 @@ static void test_comparison_words_source(void) {
 		assert_source_stack("5 7 ~=", expected, 1, "test_ne_source");
 	}
 	{
-		const word_t expected[] = {1};
+		const word_t expected[] = {0};
 		assert_source_stack("5 2 <", expected, 1, "test_lt_source");
 	}
 	{
-		const word_t expected[] = {1};
+		const word_t expected[] = {0};
 		assert_source_stack("2 5 >", expected, 1, "test_gt_source");
 	}
 	{

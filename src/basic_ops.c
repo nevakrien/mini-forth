@@ -309,7 +309,7 @@ op_roll: {
     vm->tos = (lhs oper rhs); \
     DISPATCH(); \
   }
-  
+
   BASIC_ARITH(add, +)
   BASIC_ARITH(sub, -)
   BASIC_ARITH(mul, *)
@@ -320,19 +320,12 @@ op_roll: {
   BASIC_ARITH(bit_xor, ^)
   BASIC_ARITH(shl, <<)
   BASIC_ARITH(shr, >>)
-
-
-#define BASIC_CMP(name, oper)                                                  \
-  ASSERT(vm->ds.len >= 2);                                                     \
-  op_##name : vm->tos = (word_t)(vm->tos oper ARR_POP(vm->ds));               \
-  DISPATCH();
-
-  BASIC_CMP(eq, ==)
-  BASIC_CMP(ne, !=)
-  BASIC_CMP(lt, <)
-  BASIC_CMP(gt, >)
-  BASIC_CMP(le, <=)
-  BASIC_CMP(ge, >=)
+  BASIC_ARITH(eq, ==)
+  BASIC_ARITH(ne, !=)
+  BASIC_ARITH(lt, <)
+  BASIC_ARITH(gt, >)
+  BASIC_ARITH(le, <=)
+  BASIC_ARITH(ge, >=)
 
 op_zeq:
   ASSERT(vm->ds.len >= 1);
