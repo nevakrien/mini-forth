@@ -38,7 +38,7 @@ int main(void){
         vm.input.end =line + len;
 
         if(run_text(&vm)){
-            printf("Error running: %s\n", line);
+            // printf("Error running: %s\n", line);
         }
     }
 

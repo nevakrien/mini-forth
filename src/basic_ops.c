@@ -25,6 +25,8 @@ void run_vm(VM* vm, code_t* code){
         [OP_PEEK_RS]    = &&op_peek_rs,
         [OP_COMPILE_CODE] = &&op_compile_code,
         [OP_WORD_CALL_PTR] = &&op_word_call_ptr,
+        [OP_NEXT_TOKEN] = &&op_next_token,
+        [OP_FIND_WORD] = &&op_find_word,
         [OP_DOT] = &&op_dot,
         [OP_DOT_S] = &&op_dot_s,
 
@@ -72,6 +74,21 @@ op_compile_code: {
     const Word* f = (const Word*)vm->tos;
     DROP();
     compile_later(&vm->comp,f);
+    DISPATCH();
+}
+
+op_next_token: {
+    TextStream tok = next_token(&vm->input);
+    size_t len = tok.end-tok.start;
+    PUSH((word_t)tok.start);
+    PUSH((word_t)len);
+    DISPATCH();
+}
+
+op_find_word: {
+    const char* text = (void*)ARR_POP(vm->ds);
+    size_t len = (size_t)vm->tos;
+    vm->tos = (word_t)lex_find(vm->lex,text,len);
     DISPATCH();
 }
 

@@ -101,6 +101,8 @@ static inline void lex_init(Lex* lex) {
         { OP_DONE, "bye" },
         { OP_COMPILE_CODE, "compile," },
         { OP_WORD_CALL_PTR, "run-word" },
+        { OP_FIND_WORD, "find-word" },
+        { OP_NEXT_TOKEN, "next-token" },
         { OP_DOT, "." },
         { OP_DOT_S, ".s" },
     };
@@ -159,7 +161,8 @@ static inline int compile_text(VM* vm){
     if(tok_len == 0) return 0;
 
     if(compile_token(vm,token.start,tok_len)){
-        //TODO print the error with the unrecognized name
+        fprintf(stderr, "error: unrecognized token '%.*s'\n",
+                (int)tok_len, token.start);
         return 1;
     }
 
@@ -171,8 +174,23 @@ static inline int run_text(VM* vm){
         return 1;
 
     ARR_PUSH(vm->comp,OP_DONE);
-    run_vm(vm,vm->comp.data);
-    vm->comp.len=0;
+    
+    //we wana run on data while also exposing a comp stack
+    //so we need to store the stack here for a bit
+    Comp comp = vm->comp;
+    comp.len=0;
+    vm->comp=(Comp){0};
+
+    run_vm(vm,comp.data);
+    
+    //check if we can reuse the exising memory
+    if(vm->comp.data){
+        free(comp.data);
+    }
+    else{
+        vm->comp=comp;
+    }
+    
     return 0;
 }
 

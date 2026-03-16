@@ -33,6 +33,8 @@ typedef enum : char {
     OP_POP_RS,
     OP_PEEK_RS,
 
+    OP_NEXT_TOKEN,
+    OP_FIND_WORD,
     OP_COMPILE_CODE,
     OP_WORD_CALL_PTR,
 
