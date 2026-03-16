@@ -152,29 +152,22 @@ static inline int compile_token(VM* vm,const char* name, size_t name_len){
     return 0;
 }
 
-static inline int compile_text(VM* vm,const char* text, const char* text_end){
-    const char* tok_start = text;
-    
-    while(tok_start!=text_end && *tok_start==' ')
-            tok_start++;
+static inline int compile_text(VM* vm){
+    TextStream token = next_token(&vm->input);
 
-    const char* tok_end = tok_start;
-    while(tok_end!=text_end && *tok_end!=' ')
-            tok_end++;
-
-    size_t tok_len = tok_end-tok_start;
+    size_t tok_len = token.end-token.start;
     if(tok_len == 0) return 0;
 
-    if(compile_token(vm,tok_start,tok_len)){
+    if(compile_token(vm,token.start,tok_len)){
         //TODO print the error with the unrecognized name
         return 1;
     }
 
-    return compile_text(vm,tok_end,text_end);
+    return compile_text(vm);
 }
 
-static inline int run_text(VM* vm,const char* text, const char* text_end){
-    if(compile_text(vm,text,text_end))  // compile_text returns 0 on success
+static inline int run_text(VM* vm){
+    if(compile_text(vm))
         return 1;
 
     ARR_PUSH(vm->comp,OP_DONE);
@@ -183,17 +176,7 @@ static inline int run_text(VM* vm,const char* text, const char* text_end){
     return 0;
 }
 
-static inline int run_lines(VM* vm,const char* text, size_t text_len){
-    const char* cur = text;
-    const char* end = text+text_len;
-    while(cur<end){
-        const char* line_end = cur;
-        while(line_end<end && *line_end!='\n') line_end++;
-        if(run_text(vm,cur,line_end)) return 1;
-        cur=line_end;
-        if(cur<end) cur++;
-    } 
-}
+
 
 #endif // COMPILE_H
 

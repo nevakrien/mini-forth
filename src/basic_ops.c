@@ -117,12 +117,13 @@ op_dot:
     DISPATCH();
 
 op_dot_s:
+    for(size_t i = 1; i < vm->ds.len; i++){
+        printf("%td ", (sword_t)vm->ds.data[i]);
+    }
+
     if(vm->ds.len)
         printf("%td ", (sword_t)vm->tos);
 
-    for(size_t i = 0; i + 1 < vm->ds.len; i++){
-        printf("%td ", (sword_t)vm->ds.data[i]);
-    }
     printf("\n");
     DISPATCH();
 

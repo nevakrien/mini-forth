@@ -54,12 +54,32 @@ typedef struct {
     size_t len;
 }Code;
 
+typedef struct {
+    const char* start;
+    const char* end;
+}TextStream;
+
+static inline TextStream next_token(TextStream* stream){
+    const char* start = stream->start;
+    
+    while(start!=stream->end && *start==' ')
+            start++;
+
+    const char* end = start;
+    while(end!=stream->end && *end!=' ')
+            end++;
+
+    stream->start=end;
+    return (TextStream){start,end};
+}
+
 struct Lex;
 typedef struct {
 	word_t tos;
 	Stack ds;
 	Stack rs;
 	Comp comp;
+    TextStream input;
     //lex is not owned and wont be auto freed
     struct Lex* lex;
 }VM;
