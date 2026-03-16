@@ -149,6 +149,27 @@ static void test_run_loop(){
     lex_free(&lex);
 }
 
+static void test_end_to_end(){
+	Lex lex;
+    lex_init(&lex);
+
+    TextStream text ={0};
+    text.start = "2 : add1 1 + ; add1";
+    text.end = text.start+strlen(text.start);
+
+    VM vm;
+	vm_init(&vm);
+
+	vm.lex=&lex;
+	vm.input=text;
+	run_text(&vm);
+	assert(vm.tos==3);
+	printf("test_end_to_end: PASSED (3)\n");
+
+	vm_free(&vm);
+    lex_free(&lex);
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -157,6 +178,7 @@ int main(void){
 	test_sub();
 	test_call();
 	test_run_loop();
+	test_end_to_end();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;
