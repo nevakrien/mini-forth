@@ -115,6 +115,9 @@ StopReason run_vm(VM *vm, const code_t *code) {
       [OP_FUNC_END] = &&op_func_end,
       [OP_FUNC_INLINE_END] = &&op_func_inline_end,
       [OP_FUNC_OUTLINE_END] = &&op_func_outline_end,
+      [OP_COMPILE_IF] = &&op_compile_if,
+      [OP_COMPILE_ELSE] = &&op_compile_else,
+      [OP_COMPILE_END] = &&op_compile_end,
 
       [OP_BRANCH] = &&op_branch,
       [OP_JUMP] = &&op_jump,
@@ -222,7 +225,8 @@ op_ret:
 op_branch:{
     REQUIRE_DS(1);
     word_t cond= vm->tos;
-    if(cond){
+    DROP();
+    if(!cond){
         goto op_jump;
     }
 
@@ -577,6 +581,71 @@ op_find_word: {
 
   OP_FUNC_END(op_func_end, if (entry->word.code.len <= sizeof(word_t) + 1)
                                entry->word.is_inline = true;)
+
+op_compile_if: {
+    //we compile a branch that later gets patched.
+    PUSH(vm->comp.len);
+    PUSH(COMP_TAG_IF);
+
+    ARR_PUSH(vm->comp,OP_BRANCH);
+    comp_push_offset(&vm->comp,0);
+
+    DISPATCH();
+}
+
+op_compile_else: {
+    REQUIRE_DS(2);
+
+    if(vm->tos!=COMP_TAG_IF){
+        fprintf(stderr, "else must come after if\n");
+        return STOP_REASON_ERROR;
+    }
+
+    //patch the else branch to jump here
+    word_t if_offset =ARR_PEEK(vm->ds);
+    boffset_t size_of_jump = 1+sizeof(boffset_t);
+    boffset_t jump = vm->comp.len-if_offset+size_of_jump;
+    memcpy(vm->comp.data+if_offset+1,&jump,sizeof(jump));
+
+    //put our tag onto the stack with a pending patch
+    vm->tos=COMP_TAG_ELSE;
+    ARR_PEEK(vm->ds)=vm->comp.len;
+
+    ARR_PUSH(vm->comp,OP_JUMP);
+    comp_push_offset(&vm->comp,0);
+
+    //done
+    DISPATCH();
+}
+
+
+op_compile_end: {
+    REQUIRE_DS(2);
+    comp_tag_t tag = (comp_tag_t)vm->tos;
+    word_t data_offset = ARR_PEEK(vm->ds);
+
+    switch(tag){
+    case COMP_TAG_IF:
+    case COMP_TAG_ELSE:
+    {   
+        boffset_t jump = vm->comp.len-data_offset;
+        memcpy(vm->comp.data+data_offset+1,&jump,sizeof(jump));
+        break;
+    }
+
+    case COMP_TAG_FUNC:
+    case COMP_TAG_END:
+        fprintf(stderr, "tried closing a non existent scope\n");
+        return STOP_REASON_ERROR;
+    default:
+        fprintf(stderr, "bad tag\n");
+        return STOP_REASON_ERROR;
+    }
+
+    DROP();
+    DROP();
+    DISPATCH();
+}
 
 op_compile_loop: {
   // puts("runing compile loop");

@@ -575,6 +575,28 @@ static void test_bitwise_words_source(void) {
 	}
 }
 
+static void test_if_words_source(void) {
+	{
+		const word_t expected[] = {7};
+		assert_source_stack(": choose 1 if 7 end ; choose",
+		                    expected, 1, "test_if_true_source");
+	}
+	{
+		assert_source_stack(": choose 0 if 7 end ; choose",
+		                    NULL, 0, "test_if_false_source");
+	}
+	{
+		const word_t expected[] = {7};
+		assert_source_stack(": choose 1 if 7 else 9 end ; choose",
+		                    expected, 1, "test_if_else_true_source");
+	}
+	{
+		const word_t expected[] = {9};
+		assert_source_stack(": choose 0 if 7 else 9 end ; choose",
+		                    expected, 1, "test_if_else_false_source");
+	}
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -592,6 +614,7 @@ int main(void){
 	test_stack_words_source();
 	test_comparison_words_source();
 	test_bitwise_words_source();
+	test_if_words_source();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;

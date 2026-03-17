@@ -23,7 +23,16 @@ typedef struct Lex{
 
 typedef enum : word_t{
     COMP_TAG_FUNC,
+    COMP_TAG_END,//generic end of scope (then/again/repeat)
+
     COMP_TAG_IF,
+    COMP_TAG_ELSE,
+
+    // COMP_TAG_BEGIN,
+    // COMP_TAG_UNTIL,
+    // COMP_TAG_WHILE,
+    // COMP_TAG_BREAK,
+    // COMP_TAG_REPEAT,
 } comp_tag_t;
 
 static inline void comp_push_word(Comp* comp,word_t c){
@@ -169,6 +178,9 @@ static inline void lex_init(Lex* lex) {
         { OP_FUNC_END, ";" },
         { OP_FUNC_INLINE_END, ";inline" },
         { OP_FUNC_OUTLINE_END, ";outline" },
+        { OP_COMPILE_IF, "if" },
+        { OP_COMPILE_ELSE, "else" },
+        { OP_COMPILE_END, "end" },
     };
     num_ops = sizeof(simple_now) / sizeof(simple_now[0]);
     
