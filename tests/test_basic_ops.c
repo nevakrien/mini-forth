@@ -298,6 +298,102 @@ static void test_pick_roll(void){
 	vm_free(&vm);
 }
 
+#ifndef VM_HARD_STACK_ERRORS
+static void assert_run_vm_stop_reason(Comp *comp,
+				      StopReason expected,
+				      const char *test_name)
+{
+	printf("%s: ", test_name);
+	fflush(stdout);
+
+	VM vm;
+	vm_init(&vm);
+
+	StopReason actual = run_vm(&vm, comp->data);
+	assert(actual == expected);
+
+	printf("PASSED\n");
+	vm_free(&vm);
+}
+
+static void test_stack_error_paths(void){
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_DROP);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_drop_underflow");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_PUSH_CONST);
+		comp_push_word(&comp, 1);
+		comp_push_code(&comp, OP_ADD);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_add_underflow");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_PUSH_CONST);
+		comp_push_word(&comp, 1);
+		comp_push_code(&comp, OP_OVER);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_over_underflow");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_PUSH_CONST);
+		comp_push_word(&comp, 1);
+		comp_push_code(&comp, OP_PUSH_CONST);
+		comp_push_word(&comp, 5);
+		comp_push_code(&comp, OP_PICK);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_pick_depth_oob");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_PUSH_CONST);
+		comp_push_word(&comp, 1);
+		comp_push_code(&comp, OP_PUSH_CONST);
+		comp_push_word(&comp, 5);
+		comp_push_code(&comp, OP_ROLL);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_roll_depth_oob");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_POP_RS);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_pop_rs_underflow");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_RET);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_ret_underflow");
+		free(comp.data);
+	}
+
+	{
+		Comp comp = {0};
+		comp_push_code(&comp, OP_PUSH_RS);
+		comp_push_code(&comp, OP_DONE);
+		assert_run_vm_stop_reason(&comp, STOP_REASON_ERROR, "test_push_rs_underflow");
+		free(comp.data);
+	}
+}
+#endif
+
 static void assert_source_stack(const char *src,
                                 const word_t *expected,
                                 size_t expected_len,
@@ -490,6 +586,9 @@ int main(void){
 	test_end_to_end();
 	test_run_stop_codes();
 	test_pick_roll();
+#ifndef VM_HARD_STACK_ERRORS
+	test_stack_error_paths();
+#endif
 	test_stack_words_source();
 	test_comparison_words_source();
 	test_bitwise_words_source();

@@ -3,8 +3,21 @@
 #include "utils.h"
 #include <stdio.h>
 
+#ifndef VM_HARD_STACK_ERRORS
+#define VM_STACK_CHECK(cond)                                                   \
+  do {                                                                         \
+    if (!(cond))                                                               \
+      return STOP_REASON_ERROR;                                                \
+  } while (0)
+#else
+#define VM_STACK_CHECK(cond) ASSERT(cond)
+#endif
+
 #define PUSH(x) (ARR_PUSH(vm->ds, vm->tos), vm->tos = x)
 #define DROP() (vm->tos = ARR_POP(vm->ds))
+#define REQUIRE_DS(n) VM_STACK_CHECK(vm->ds.len >= (n))
+#define REQUIRE_RS(n) VM_STACK_CHECK(vm->rs.len >= (n))
+#define REQUIRE_VALID_DEPTH(depth) VM_STACK_CHECK((size_t)(depth) < vm->ds.len)
 
 static inline Code take_comp(VM *vm) {
   Code ans = {0};
@@ -202,11 +215,12 @@ op_compile_const_print: {
 }
 
 op_ret:
+  REQUIRE_RS(1);
   code = (code_t *)ARR_POP(vm->rs);
   DISPATCH_STAY();
 
 op_branch:{
-    ASSERT(vm->ds.len >= 1);
+    REQUIRE_DS(1);
     word_t cond= vm->tos;
     if(cond){
         goto op_jump;
@@ -250,29 +264,33 @@ op_compile_branch:{
 
 
 op_pop_rs:
+  REQUIRE_RS(1);
   PUSH(ARR_POP(vm->rs));
   DISPATCH();
 
 op_peek_rs:
+  REQUIRE_RS(1);
   PUSH(ARR_PEEK(vm->rs));
   DISPATCH();
 
 op_push_rs:
+  REQUIRE_DS(1);
   ARR_PUSH(vm->rs, vm->tos);
   DROP();
   DISPATCH();
 
 op_drop:
+  REQUIRE_DS(1);
   DROP();
   DISPATCH();
 
 op_dup:
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
   PUSH(vm->tos);
   DISPATCH();
 
 op_swap: {
-  ASSERT(vm->ds.len >= 2);
+  REQUIRE_DS(2);
   word_t top = vm->tos;
   word_t bottom = ARR_PEEK(vm->ds);
   vm->tos = bottom;
@@ -281,18 +299,19 @@ op_swap: {
 }
 
 op_over:{
+  REQUIRE_DS(2);
   word_t bot = ARR_PEEK(vm->ds);
   PUSH(bot);
   DISPATCH();
 }
 
 op_nip:
-  ASSERT(vm->ds.len >= 2);
+  REQUIRE_DS(2);
   (void)ARR_POP(vm->ds);
   DISPATCH();
 
 op_tuck: {
-  ASSERT(vm->ds.len >= 2);
+  REQUIRE_DS(2);
   word_t top = vm->tos;
   word_t bottom = ARR_PEEK(vm->ds);
   ARR_PEEK(vm->ds)=top;
@@ -302,7 +321,7 @@ op_tuck: {
 }
 
 op_rot: {
-  ASSERT(vm->ds.len >= 3);
+  REQUIRE_DS(3);
   word_t c = vm->tos;
   word_t b = ARR_POP(vm->ds);
   word_t a = ARR_POP(vm->ds);
@@ -313,7 +332,7 @@ op_rot: {
 }
 
 op_nrot: {
-  ASSERT(vm->ds.len >= 3);
+  REQUIRE_DS(3);
   word_t c = vm->tos;
   word_t b = ARR_POP(vm->ds);
   word_t a = ARR_POP(vm->ds);
@@ -324,7 +343,7 @@ op_nrot: {
 }
 
 op_2dup: {
-  ASSERT(vm->ds.len >= 2);
+  REQUIRE_DS(2);
   word_t b = vm->tos;
   word_t a = ARR_PEEK(vm->ds);
   PUSH(a);
@@ -333,13 +352,13 @@ op_2dup: {
 }
 
 op_2drop:
-  ASSERT(vm->ds.len >= 2);
+  REQUIRE_DS(2);
   DROP();
   DROP();
   DISPATCH();
 
 op_2swap: {
-  ASSERT(vm->ds.len >= 4);
+  REQUIRE_DS(4);
   word_t d = vm->tos;
   word_t c = ARR_POP(vm->ds);
   word_t b = ARR_POP(vm->ds);
@@ -352,7 +371,7 @@ op_2swap: {
 }
 
 op_2over: {
-  ASSERT(vm->ds.len >= 4);
+  REQUIRE_DS(4);
   word_t a = ARR_AT(vm->ds, vm->ds.len - 3);
   word_t b = ARR_AT(vm->ds, vm->ds.len - 2);
   PUSH(a);
@@ -361,23 +380,25 @@ op_2over: {
 }
 
 op_pick: {
-    ASSERT(vm->ds.len >= 1);
+    REQUIRE_DS(1);
     word_t depth = vm->tos;
+    REQUIRE_VALID_DEPTH(depth);
     word_t idx = vm->ds.len - depth-1;
     
-    ASSERT(idx!=0);
+    VM_STACK_CHECK(idx != 0);
     vm->tos = ARR_AT(vm->ds, idx);
     
     DISPATCH();
 }
 
 op_roll: {
-    ASSERT(vm->ds.len >= 1);
+    REQUIRE_DS(1);
 
     word_t depth = vm->tos;
+    REQUIRE_VALID_DEPTH(depth);
     word_t idx = vm->ds.len - depth-1;
     
-    ASSERT(idx!=0);
+    VM_STACK_CHECK(idx != 0);
     vm->tos = ARR_AT(vm->ds, idx);
 
     memmove(
@@ -392,7 +413,7 @@ op_roll: {
 
 #define BASIC_ARITH(name, oper) \
   op_##name: { \
-    ASSERT(vm->ds.len >= 2); \
+    REQUIRE_DS(2); \
     word_t rhs = vm->tos; \
     word_t lhs = ARR_POP(vm->ds); \
     vm->tos = (lhs oper rhs); \
@@ -417,21 +438,21 @@ op_roll: {
   BASIC_ARITH(ge, >=)
 
 op_zeq:
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
   vm->tos = (word_t)(vm->tos == 0);
   DISPATCH();
 
 op_zne:
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
   vm->tos = (word_t)(vm->tos != 0);
   DISPATCH();
 op_bit_not:
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
   vm->tos = ~vm->tos;
   DISPATCH();
 
 op_dot:
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
 
   printf("%td\n", (sword_t)vm->tos);
   DROP();
@@ -459,7 +480,7 @@ op_call: {
 }
 
 op_call_dyn: {
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
 
   code = (code_t *)vm->tos;
   DROP();
@@ -467,7 +488,7 @@ op_call_dyn: {
 }
 
 op_word_call_ptr: {
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
 
   const Word *f = (const Word *)vm->tos;
   vm->tos = (word_t)f->code.data;
@@ -475,7 +496,7 @@ op_word_call_ptr: {
 }
 
 op_compile_code: {
-  ASSERT(vm->ds.len >= 1);
+  REQUIRE_DS(1);
 
   const Word *f = (const Word *)vm->tos;
   DROP();
@@ -492,7 +513,7 @@ op_next_token: {
 }
 
 op_find_word: {
-  ASSERT(vm->ds.len >= 2);
+  REQUIRE_DS(2);
 
   const char *text = (void *)ARR_POP(vm->ds);
   size_t len = (size_t)vm->tos;
@@ -521,7 +542,7 @@ op_find_word: {
   // ---------- Function End Core ----------
 
 #define FUNC_END_COMMON(EXTRA)                                                 \
-  ASSERT(vm->ds.len >= 2);                                                    \
+  REQUIRE_DS(2);                                                              \
   word_t tag = vm->tos;                                                        \
     if (tag != COMP_TAG_FUNC) {                                                  \
       printf("wrong tag in return statment\n");                                  \
@@ -539,6 +560,7 @@ op_find_word: {
   ASSERT(vm->lex);                                                             \
   lex_insert_entry(vm->lex, entry);                                            \
                                                                                \
+  REQUIRE_RS(1);                                                               \
   (void)ARR_POP(vm->rs);                                                       \
   goto op_ret;
 
