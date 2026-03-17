@@ -170,6 +170,77 @@ static void test_end_to_end(){
     lex_free(&lex);
 }
 
+static void test_run_stop_codes(void){
+	Lex lex;
+    lex_init(&lex);
+
+	{
+		VM vm;
+		vm_init(&vm);
+		vm.lex = &lex;
+
+		TextStream text = {0};
+		text.start = "1 2 +";
+		text.end = text.start + strlen(text.start);
+		vm.input = text;
+
+		assert(run_text(&vm) == STOP_REASON_EVAL_INPUT_EMPTY);
+		vm_free(&vm);
+	}
+
+	{
+		VM vm;
+		vm_init(&vm);
+		vm.lex = &lex;
+
+		TextStream text = {0};
+		text.start = "bye";
+		text.end = text.start + strlen(text.start);
+		vm.input = text;
+
+		assert(run_text(&vm) == STOP_REASON_BYE);
+		vm_free(&vm);
+	}
+
+	{
+		VM vm;
+		vm_init(&vm);
+		vm.lex = &lex;
+
+		TextStream text = {0};
+		text.start = ": add1 1 +";
+		text.end = text.start + strlen(text.start);
+		vm.input = text;
+
+		assert(run_text(&vm) == STOP_REASON_COMPILE_INPUT_EMPTY);
+
+		text.start = "; 2 add1";
+		text.end = text.start + strlen(text.start);
+		vm.input = text;
+
+		assert(run_compile_text(&vm) == STOP_REASON_EVAL_INPUT_EMPTY);
+		assert(vm.tos == 3);
+		vm_free(&vm);
+	}
+
+	{
+		VM vm;
+		vm_init(&vm);
+		vm.lex = &lex;
+
+		TextStream text = {0};
+		text.start = "wat";
+		text.end = text.start + strlen(text.start);
+		vm.input = text;
+
+		assert(run_text(&vm) == STOP_REASON_ERROR);
+		vm_free(&vm);
+	}
+
+	printf("test_run_stop_codes: PASSED\n");
+	lex_free(&lex);
+}
+
 static void test_pick_roll(void){
 	VM vm;
 	vm_init(&vm);
@@ -417,6 +488,7 @@ int main(void){
 	test_call();
 	test_run_loop();
 	test_end_to_end();
+	test_run_stop_codes();
 	test_pick_roll();
 	test_stack_words_source();
 	test_comparison_words_source();

@@ -18,8 +18,10 @@ int main(void){
 
     printf("Stack REPL - type 'bye' to exit\n");
 
+    bool resume_compile = false;
+
     while(1){
-        printf("> ");
+        printf(resume_compile ? "... " : "> ");
         if(!fgets(line, sizeof(line), stdin)){
             break;
         }
@@ -36,7 +38,18 @@ int main(void){
 
         vm.input.start=line;
         vm.input.end =line + len;
-        run_text(&vm);
+        StopReason stop = resume_compile ? run_compile_text(&vm) : run_text(&vm);
+        if(stop == STOP_REASON_BYE){
+            break;
+        }
+
+        resume_compile = (stop == STOP_REASON_COMPILE_INPUT_EMPTY);
+
+        if(stop == STOP_REASON_ERROR){
+            printf("err\n");
+        } else if(stop == STOP_REASON_EVAL_INPUT_EMPTY){
+            printf("ok\n");
+        }
     }
 
     lex_free(&lex);

@@ -184,12 +184,28 @@ static inline void lex_init(Lex* lex) {
 }
 
 
-static inline void run_text(VM* vm){
-    code_t code[]={OP_RUN_LOOP,OP_DONE};
-    run_vm(vm,code);
-    return;
+static inline StopReason run_text(VM* vm){
+    static const code_t code[]={OP_RUN_LOOP,OP_DONE};
+    return run_vm(vm,code);
 }
 
+static inline StopReason run_compile_text(VM* vm){
+    static const code_t code[]={OP_COMPILE_LOOP,OP_DONE};
+    return run_vm(vm,code);
+}
+
+// static inline void run_repl_text(VM* vm){
+//     //construct [loop print "ok" done]
+//     code_t code[2+sizeof(word_t)+4]={OP_RUN_LOOP,OP_CONST_PRINT};
+//     word_t len = 3;
+//     code_t code_end[4] = {' ','o','k',OP_DONE};
+
+//     memcpy(code+2,&len,sizeof(word_t));
+//     memcpy(code+2+sizeof(word_t),code_end,sizeof(code_end));
+
+//     run_vm(vm,code);
+//     return;
+// }
 
 
 #endif // COMPILE_H

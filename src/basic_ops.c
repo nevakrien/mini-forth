@@ -40,7 +40,7 @@ static inline int parse_number(word_t *ans, const char *name, size_t name_len) {
 }
 
 
-void run_vm(VM *vm, const code_t *code) {
+StopReason run_vm(VM *vm, const code_t *code) {
   // puts("run_vm start");
 
   static const void *const dispatch[] = {
@@ -133,7 +133,7 @@ void run_vm(VM *vm, const code_t *code) {
   DISPATCH_STAY();
 
 op_done:
-  return;
+  return STOP_REASON_BYE;
 
 op_push_const: {
   word_t c = 0;
@@ -171,7 +171,7 @@ op_compile_const_print: {
     for (;;) {
         if (vm->input.start == vm->input.end) {
             printf("unclosed delimiter\n");
-            return;
+            return STOP_REASON_ERROR;
         }
 
         if (*vm->input.start == '"') {
@@ -519,10 +519,10 @@ op_find_word: {
 #define FUNC_END_COMMON(EXTRA)                                                 \
   ASSERT(vm->ds.len >= 2);                                                    \
   word_t tag = vm->tos;                                                        \
-  if (tag != COMP_TAG_FUNC) {                                                  \
-    printf("wrong tag in return statment\n");                                  \
-    return;                                                                    \
-  }                                                                            \
+    if (tag != COMP_TAG_FUNC) {                                                  \
+      printf("wrong tag in return statment\n");                                  \
+      return STOP_REASON_ERROR;                                                  \
+    }                                                                            \
   DROP();                                                                      \
   LexEntry *entry = (LexEntry *)vm->tos;                                       \
   DROP();                                                                      \
@@ -557,7 +557,7 @@ op_compile_loop: {
 
   TextStream tok = next_token(&vm->input);
   if (tok.start == tok.end)
-    DISPATCH();
+    return STOP_REASON_COMPILE_INPUT_EMPTY;
   const char *text = tok.start;
   size_t len = tok.end - tok.start;
 
@@ -575,7 +575,7 @@ op_compile_loop: {
   word_t num = 0;
   if (parse_number(&num, text, len)) {
     fprintf(stderr, "error: unrecognized token '%.*s'\n", (int)len, text);
-    return;
+    return STOP_REASON_ERROR;
   };
 
   comp_push_code(&vm->comp, OP_PUSH_CONST);
@@ -588,7 +588,7 @@ op_run_loop: {
 
   TextStream tok = next_token(&vm->input);
   if (tok.start == tok.end)
-    DISPATCH();
+    return STOP_REASON_EVAL_INPUT_EMPTY;
   const char *text = tok.start;
   size_t len = tok.end - tok.start;
 
@@ -600,7 +600,7 @@ op_run_loop: {
   word_t num = 0;
   if (parse_number(&num, text, len)) {
     fprintf(stderr, "error: unrecognized token '%.*s'\n", (int)len, text);
-    return;
+    return STOP_REASON_ERROR;
   };
   PUSH(num);
   goto op_run_loop;
