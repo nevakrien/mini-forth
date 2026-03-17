@@ -597,6 +597,15 @@ static void test_if_words_source(void) {
 	}
 }
 
+static void test_begin_words_source(void) {
+	{
+		const word_t expected[] = {120};
+		assert_source_stack(
+		    ": fact 1 swap begin dup 1 <= if drop raw-ret end tuck * swap 1 - end ;outline 5 fact",
+		    expected, 1, "test_begin_factorial_source");
+	}
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -615,6 +624,7 @@ int main(void){
 	test_comparison_words_source();
 	test_bitwise_words_source();
 	test_if_words_source();
+	test_begin_words_source();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;

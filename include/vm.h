@@ -86,6 +86,7 @@ typedef enum : char {
     OP_FUNC_OUTLINE_END,
     OP_COMPILE_IF,
     OP_COMPILE_ELSE,
+    OP_COMPILE_BEGIN,
     OP_COMPILE_END,
 
     OP_BRANCH,
