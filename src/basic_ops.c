@@ -118,6 +118,7 @@ StopReason run_vm(VM *vm, const code_t *code) {
       [OP_COMPILE_IF] = &&op_compile_if,
       [OP_COMPILE_ELSE] = &&op_compile_else,
       [OP_COMPILE_BEGIN] = &&op_compile_begin,
+      [OP_COMPILE_UNTIL] = &&op_compile_until,
       [OP_COMPILE_END] = &&op_compile_end,
 
       [OP_BRANCH] = &&op_branch,
@@ -620,13 +621,29 @@ op_compile_else: {
 }
 
 op_compile_begin: {
-    //we compile a branch that later gets patched.
     PUSH(vm->comp.len);
     PUSH(COMP_TAG_BEGIN);
 
     DISPATCH();
 }
 
+op_compile_until: {
+    REQUIRE_DS(2);
+    if(vm->tos!=COMP_TAG_BEGIN){
+        fprintf(stderr, "until must come after begin\n");
+        return STOP_REASON_ERROR;
+    }
+    sword_t begin_loc = (sword_t)ARR_PEEK(vm->ds);
+    boffset_t offset = begin_loc-vm->comp.len;
+    ARR_PUSH(vm->comp,OP_BRANCH);
+    comp_push_offset(&vm->comp,offset);
+
+    //we ended the loop now
+    DROP();
+    DROP();
+
+    DISPATCH();
+}
 
 op_compile_end: {
     REQUIRE_DS(2);

@@ -29,7 +29,6 @@ typedef enum : word_t{
     COMP_TAG_ELSE,
 
     COMP_TAG_BEGIN,
-    // COMP_TAG_UNTIL,
     // COMP_TAG_BREAK,
     // COMP_TAG_CONTINUE,
 } comp_tag_t;
@@ -180,6 +179,7 @@ static inline void lex_init(Lex* lex) {
         { OP_COMPILE_IF, "if" },
         { OP_COMPILE_ELSE, "else" },
         { OP_COMPILE_BEGIN, "begin" },
+        { OP_COMPILE_UNTIL, "until" },
         { OP_COMPILE_END, "end" },
     };
     num_ops = sizeof(simple_now) / sizeof(simple_now[0]);

@@ -606,6 +606,15 @@ static void test_begin_words_source(void) {
 	}
 }
 
+static void test_until_words_source(void) {
+	{
+		const word_t expected[] = {0};
+		assert_source_stack(
+		    ": countdown begin 1 - dup 0= until ;outline 5 countdown",
+		    expected, 1, "test_until_countdown_source");
+	}
+}
+
 int main(void){
 	test_add();
 	test_mul();
@@ -625,6 +634,7 @@ int main(void){
 	test_bitwise_words_source();
 	test_if_words_source();
 	test_begin_words_source();
+	test_until_words_source();
 	
 	printf("\nAll tests PASSED!\n");
 	return 0;
