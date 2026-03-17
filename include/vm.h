@@ -20,6 +20,7 @@ typedef struct {
 
 typedef enum : char {
     OP_DONE=0,
+    OP_CRASH,
     OP_PUSH_CONST,
     OP_CONST_PRINT,
     OP_COMPILE_CONST_PRINT,

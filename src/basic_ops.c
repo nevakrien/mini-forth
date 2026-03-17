@@ -45,6 +45,7 @@ StopReason run_vm(VM *vm, const code_t *code) {
 
   static const void *const dispatch[] = {
       [OP_DONE] = &&op_done,
+      [OP_CRASH] = &&op_crash,
       [OP_PUSH_CONST] = &&op_push_const,
       [OP_CONST_PRINT] = &&op_const_print,
       [OP_COMPILE_CONST_PRINT] = &&op_compile_const_print,
@@ -134,6 +135,9 @@ StopReason run_vm(VM *vm, const code_t *code) {
 
 op_done:
   return STOP_REASON_BYE;
+
+op_crash:
+  return STOP_REASON_ERROR;
 
 op_push_const: {
   word_t c = 0;

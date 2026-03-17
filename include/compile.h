@@ -140,6 +140,7 @@ static inline void lex_init(Lex* lex) {
         { OP_PEEK_RS, "r@" },
         { OP_RET, "ret" },
         { OP_DONE, "bye" },
+        { OP_CRASH, "crash" },
         { OP_COMPILE_CODE, "compile," },
         { OP_COMPILE_LOOP, "compile-loop" },
         { OP_WORD_CALL_PTR, "run-word" },
